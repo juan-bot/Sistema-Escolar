@@ -2,9 +2,22 @@ import React, { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import { BsList, BsBell } from 'react-icons/bs'
+import { useApp } from '../../context/AppContext'
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { loading } = useApp()
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <div className="text-center">
+          <div className="spinner-border text-primary mb-3" role="status" />
+          <p className="text-muted">Cargando datos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app-layout">

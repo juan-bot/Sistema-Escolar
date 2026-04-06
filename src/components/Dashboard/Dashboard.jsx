@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Row, Col } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
 import { useNavigate } from 'react-router-dom'
+import { seedFirestore } from '../../services/seedFirestore'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -28,6 +29,19 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 const Dashboard = () => {
   const { universities, classes, students, rubrics } = useApp()
   const navigate = useNavigate()
+  const [seeding, setSeeding] = useState(false)
+
+  const handleSeed = async () => {
+    setSeeding(true)
+    try {
+      await seedFirestore()
+    } catch (err) {
+      console.error('Error al poblar Firestore:', err)
+      alert('Error al subir datos. Revisa la consola.')
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   const stats = [
     { label: 'Universidades', value: universities.length, icon: BsBuildings, bg: 'bg-primary-soft' },
@@ -246,6 +260,15 @@ const Dashboard = () => {
                 >
                   <BsPlus size={20} /> Crear Rúbrica
                 </button>
+                {universities.length === 0 && (
+                  <button
+                    className="btn btn-primary w-100 mt-2"
+                    onClick={handleSeed}
+                    disabled={seeding}
+                  >
+                    {seeding ? 'Subiendo datos...' : '🔄 Cargar datos de ejemplo'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

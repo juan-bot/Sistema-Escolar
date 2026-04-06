@@ -1,116 +1,125 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { v4 as uuidv4 } from 'uuid'
-import { sampleData } from '../data/sampleData'
+import {
+  subscribeCollection,
+  addDocument,
+  updateDocument,
+  deleteDocument,
+  batchDeleteByField,
+  batchDeleteDocs
+} from '../services/firestoreService'
 
 const AppContext = createContext()
 
 export const useApp = () => useContext(AppContext)
 
 export const AppProvider = ({ children }) => {
-  const [universities, setUniversities] = useState(() => {
-    const saved = localStorage.getItem('cr_universities')
-    return saved ? JSON.parse(saved) : sampleData.universities
-  })
+  const [universities, setUniversities] = useState([])
+  const [classes, setClasses] = useState([])
+  const [students, setStudents] = useState([])
+  const [rubrics, setRubrics] = useState([])
+  const [grades, setGrades] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const [classes, setClasses] = useState(() => {
-    const saved = localStorage.getItem('cr_classes')
-    return saved ? JSON.parse(saved) : sampleData.classes
-  })
+  // Real-time listeners
+  useEffect(() => {
+    let loaded = 0
+    const total = 5
+    const checkLoaded = () => {
+      loaded++
+      if (loaded >= total) setLoading(false)
+    }
 
-  const [students, setStudents] = useState(() => {
-    const saved = localStorage.getItem('cr_students')
-    return saved ? JSON.parse(saved) : sampleData.students
-  })
+    const unsubs = [
+      subscribeCollection('universities', (data) => { setUniversities(data); checkLoaded() }),
+      subscribeCollection('classes', (data) => { setClasses(data); checkLoaded() }),
+      subscribeCollection('students', (data) => { setStudents(data); checkLoaded() }),
+      subscribeCollection('rubrics', (data) => { setRubrics(data); checkLoaded() }),
+      subscribeCollection('grades', (data) => { setGrades(data); checkLoaded() }),
+    ]
 
-  const [rubrics, setRubrics] = useState(() => {
-    const saved = localStorage.getItem('cr_rubrics')
-    return saved ? JSON.parse(saved) : sampleData.rubrics
-  })
-
-  const [grades, setGrades] = useState(() => {
-    const saved = localStorage.getItem('cr_grades')
-    return saved ? JSON.parse(saved) : sampleData.grades
-  })
-
-  useEffect(() => { localStorage.setItem('cr_universities', JSON.stringify(universities)) }, [universities])
-  useEffect(() => { localStorage.setItem('cr_classes', JSON.stringify(classes)) }, [classes])
-  useEffect(() => { localStorage.setItem('cr_students', JSON.stringify(students)) }, [students])
-  useEffect(() => { localStorage.setItem('cr_rubrics', JSON.stringify(rubrics)) }, [rubrics])
-  useEffect(() => { localStorage.setItem('cr_grades', JSON.stringify(grades)) }, [grades])
+    return () => unsubs.forEach(unsub => unsub())
+  }, [])
 
   // University CRUD
-  const addUniversity = (university) => {
-    setUniversities(prev => [...prev, { ...university, id: uuidv4(), createdAt: new Date().toISOString() }])
+  const addUniversity = async (university) => {
+    await addDocument('universities', university)
   }
 
-  const updateUniversity = (id, data) => {
-    setUniversities(prev => prev.map(u => u.id === id ? { ...u, ...data } : u))
+  const updateUniversity = async (id, data) => {
+    await updateDocument('universities', id, data)
   }
 
-  const deleteUniversity = (id) => {
+  const deleteUniversity = async (id) => {
     const classIds = classes.filter(c => c.universityId === id).map(c => c.id)
-    setUniversities(prev => prev.filter(u => u.id !== id))
-    setClasses(prev => prev.filter(c => c.universityId !== id))
-    setStudents(prev => prev.filter(s => !classIds.includes(s.classId)))
-    setRubrics(prev => prev.filter(r => !classIds.includes(r.classId)))
-    setGrades(prev => prev.filter(g => {
-      const studentIds = students.filter(s => classIds.includes(s.classId)).map(s => s.id)
-      return !studentIds.includes(g.studentId)
-    }))
+    const studentIds = students.filter(s => classIds.includes(s.classId)).map(s => s.id)
+
+    // Cascade delete
+    if (studentIds.length) {
+      const gradeIds = grades.filter(g => studentIds.includes(g.studentId)).map(g => g.id)
+      await batchDeleteDocs('grades', gradeIds)
+    }
+    await batchDeleteDocs('students', students.filter(s => classIds.includes(s.classId)).map(s => s.id))
+    await batchDeleteDocs('rubrics', rubrics.filter(r => classIds.includes(r.classId)).map(r => r.id))
+    await batchDeleteDocs('classes', classIds)
+    await deleteDocument('universities', id)
   }
 
   // Class CRUD
-  const addClass = (classData) => {
-    setClasses(prev => [...prev, { ...classData, id: uuidv4(), createdAt: new Date().toISOString() }])
+  const addClass = async (classData) => {
+    await addDocument('classes', classData)
   }
 
-  const updateClass = (id, data) => {
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
+  const updateClass = async (id, data) => {
+    await updateDocument('classes', id, data)
   }
 
-  const deleteClass = (id) => {
+  const deleteClass = async (id) => {
     const studentIds = students.filter(s => s.classId === id).map(s => s.id)
-    setClasses(prev => prev.filter(c => c.id !== id))
-    setStudents(prev => prev.filter(s => s.classId !== id))
-    setRubrics(prev => prev.filter(r => r.classId !== id))
-    setGrades(prev => prev.filter(g => !studentIds.includes(g.studentId)))
+    const gradeIds = grades.filter(g => studentIds.includes(g.studentId)).map(g => g.id)
+
+    await batchDeleteDocs('grades', gradeIds)
+    await batchDeleteDocs('students', studentIds)
+    await batchDeleteDocs('rubrics', rubrics.filter(r => r.classId === id).map(r => r.id))
+    await deleteDocument('classes', id)
   }
 
   // Student CRUD
-  const addStudent = (student) => {
-    setStudents(prev => [...prev, { ...student, id: uuidv4(), createdAt: new Date().toISOString() }])
+  const addStudent = async (student) => {
+    await addDocument('students', student)
   }
 
-  const updateStudent = (id, data) => {
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...data } : s))
+  const updateStudent = async (id, data) => {
+    await updateDocument('students', id, data)
   }
 
-  const deleteStudent = (id) => {
-    setStudents(prev => prev.filter(s => s.id !== id))
-    setGrades(prev => prev.filter(g => g.studentId !== id))
+  const deleteStudent = async (id) => {
+    const gradeIds = grades.filter(g => g.studentId === id).map(g => g.id)
+    await batchDeleteDocs('grades', gradeIds)
+    await deleteDocument('students', id)
   }
 
   // Rubric CRUD
-  const addRubric = (rubric) => {
-    setRubrics(prev => [...prev, { ...rubric, id: uuidv4(), createdAt: new Date().toISOString() }])
+  const addRubric = async (rubric) => {
+    await addDocument('rubrics', rubric)
   }
 
-  const updateRubric = (id, data) => {
-    setRubrics(prev => prev.map(r => r.id === id ? { ...r, ...data } : r))
+  const updateRubric = async (id, data) => {
+    await updateDocument('rubrics', id, data)
   }
 
-  const deleteRubric = (id) => {
-    setRubrics(prev => prev.filter(r => r.id !== id))
-    setGrades(prev => prev.filter(g => g.rubricId !== id))
+  const deleteRubric = async (id) => {
+    const gradeIds = grades.filter(g => g.rubricId === id).map(g => g.id)
+    await batchDeleteDocs('grades', gradeIds)
+    await deleteDocument('rubrics', id)
   }
 
   // Grade CRUD
-  const addGrade = (grade) => {
-    setGrades(prev => [...prev, { ...grade, id: uuidv4(), createdAt: new Date().toISOString() }])
+  const addGrade = async (grade) => {
+    await addDocument('grades', grade)
   }
 
-  const updateGrade = (id, data) => {
-    setGrades(prev => prev.map(g => g.id === id ? { ...g, ...data } : g))
+  const updateGrade = async (id, data) => {
+    await updateDocument('grades', id, data)
   }
 
   // Helpers
@@ -121,7 +130,7 @@ export const AppProvider = ({ children }) => {
   const getClassById = (id) => classes.find(c => c.id === id)
 
   const value = {
-    universities, classes, students, rubrics, grades,
+    universities, classes, students, rubrics, grades, loading,
     addUniversity, updateUniversity, deleteUniversity,
     addClass, updateClass, deleteClass,
     addStudent, updateStudent, deleteStudent,

@@ -14,7 +14,7 @@ import './index.css'
 function App() {
   return (
     <AppProvider>
-      <HashRouter>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
