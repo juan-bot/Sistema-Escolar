@@ -110,7 +110,7 @@ const Dashboard = () => {
       <div className="page-header">
         <div>
           <h2>Dashboard</h2>
-          <p>Hola mi bb hermosa, aquí tienes un resumen de tus clases.</p>
+          <p>Hola mi bb hermosa 💕, aquí tienes un resumen de tus clases.</p>
         </div>
       </div>
 
