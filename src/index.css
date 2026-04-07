@@ -1,18 +1,18 @@
 :root {
-  --primary: #6366F1;
-  --primary-light: #818CF8;
-  --primary-dark: #4F46E5;
-  --secondary: #EC4899;
+  --primary: #E91E86;
+  --primary-light: #F472B6;
+  --primary-dark: #BE185D;
+  --secondary: #F9A8D4;
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
-  --info: #3B82F6;
-  --bg-main: #F1F5F9;
+  --info: #EC4899;
+  --bg-main: #FDF2F8;
   --bg-card: #FFFFFF;
   --text-primary: #1E293B;
   --text-secondary: #64748B;
   --text-muted: #94A3B8;
-  --border: #E2E8F0;
+  --border: #FECDD3;
   --sidebar-width: 280px;
   --topbar-height: 70px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -46,7 +46,7 @@ body {
 /* ===== SIDEBAR ===== */
 .sidebar {
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #3730A3 100%);
+  background: linear-gradient(180deg, #831843 0%, #9D174D 50%, #BE185D 100%);
   position: fixed;
   top: 0;
   left: 0;
@@ -245,7 +245,7 @@ body {
 .search-box .form-control:focus {
   background: var(--bg-card);
   border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(233, 30, 134, 0.1);
 }
 
 .top-bar-actions {
@@ -531,7 +531,7 @@ body {
 }
 
 .custom-table tbody tr:hover {
-  background: rgba(99, 102, 241, 0.03);
+  background: rgba(233, 30, 134, 0.03);
 }
 
 .custom-table tbody tr:last-child td {
@@ -557,7 +557,7 @@ body {
 .btn-primary-custom:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(233, 30, 134, 0.3);
   color: #fff;
 }
 
@@ -671,7 +671,7 @@ body {
 
 .form-control:focus, .form-select:focus {
   border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(233, 30, 134, 0.1);
 }
 
 /* ===== CHARTS ===== */
@@ -759,7 +759,7 @@ body {
 }
 
 .criterion-item:hover {
-  background: rgba(99, 102, 241, 0.02);
+  background: rgba(233, 30, 134, 0.02);
 }
 
 .criterion-weight {
@@ -804,7 +804,7 @@ body {
 
 .grade-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 2px rgba(233, 30, 134, 0.1);
   outline: none;
 }
 
@@ -824,12 +824,12 @@ body {
 .fade-in-delay-4 { animation: fadeIn 0.3s ease 0.2s forwards; opacity: 0; }
 
 /* ===== COLOR UTILITIES ===== */
-.bg-primary-soft { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+.bg-primary-soft { background: rgba(233, 30, 134, 0.1); color: var(--primary); }
 .bg-success-soft { background: rgba(16, 185, 129, 0.1); color: var(--success); }
 .bg-warning-soft { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
 .bg-danger-soft { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-.bg-info-soft { background: rgba(59, 130, 246, 0.1); color: var(--info); }
-.bg-secondary-soft { background: rgba(236, 72, 153, 0.1); color: var(--secondary); }
+.bg-info-soft { background: rgba(236, 72, 153, 0.1); color: var(--info); }
+.bg-secondary-soft { background: rgba(249, 168, 212, 0.15); color: var(--primary); }
 
 /* ===== STUDENT AVATAR ===== */
 .student-avatar {

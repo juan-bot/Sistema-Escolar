@@ -4,8 +4,8 @@ import { useApp } from '../../context/AppContext'
 import { BsPlus, BsPencil, BsTrash, BsBook, BsPeople } from 'react-icons/bs'
 
 const COLORS = [
-  '#6366F1', '#EC4899', '#10B981', '#F59E0B', '#3B82F6',
-  '#8B5CF6', '#EF4444', '#14B8A6', '#F97316', '#06B6D4'
+  '#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899',
+  '#BE185D', '#F9A8D4', '#14B8A6', '#F97316', '#06B6D4'
 ]
 const ICONS = ['🏛️', '🎓', '📚', '🏫', '🏢', '🎯', '⭐', '🌟', '💎', '🔬']
 

@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { BsPlus, BsPencil, BsTrash, BsTrophy } from 'react-icons/bs'
 import { v4 as uuidv4 } from 'uuid'
 
-const CRITERION_COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6']
+const CRITERION_COLORS = ['#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899', '#BE185D', '#F9A8D4', '#14B8A6']
 
 const Rubrics = () => {
   const { universities, classes, rubrics, addRubric, updateRubric, deleteRubric } = useApp()
@@ -166,8 +166,8 @@ const Rubrics = () => {
                           <span
                             className="badge-custom"
                             style={{
-                              background: (uni.color || '#6366F1') + '15',
-                              color: uni.color || '#6366F1'
+                              background: (uni.color || '#E91E86') + '15',
+                              color: uni.color || '#E91E86'
                             }}
                           >
                             {uni.icon} {uni.abbreviation}
@@ -203,7 +203,7 @@ const Rubrics = () => {
                             <div className="d-flex align-items-center gap-2">
                               <h6>{criterion.name}</h6>
                               {criterion.type === 'rubric_ref' && (
-                                <span style={{ fontSize: 10, background: '#6366F115', color: '#6366F1', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                <span style={{ fontSize: 10, background: '#E91E8615', color: '#E91E86', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
                                   Parcial
                                 </span>
                               )}
@@ -362,17 +362,17 @@ const Rubrics = () => {
               <div
                 key={criterion.id}
                 style={{
-                  background: criterion.type === 'rubric_ref' ? '#6366F108' : 'var(--bg-main)',
+                  background: criterion.type === 'rubric_ref' ? '#E91E8608' : 'var(--bg-main)',
                   borderRadius: 'var(--radius-sm)',
                   padding: 16,
                   marginBottom: 12,
-                  border: criterion.type === 'rubric_ref' ? '1px solid #6366F130' : '1px solid var(--border)'
+                  border: criterion.type === 'rubric_ref' ? '1px solid #E91E8630' : '1px solid var(--border)'
                 }}
               >
                 <div className="d-flex gap-2 mb-2">
                   {criterion.type === 'rubric_ref' ? (
                     <div className="d-flex align-items-center gap-2" style={{ flex: 1 }}>
-                      <span style={{ fontSize: 10, background: '#6366F115', color: '#6366F1', padding: '2px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>
+                      <span style={{ fontSize: 10, background: '#E91E8615', color: '#E91E86', padding: '2px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>
                         Parcial
                       </span>
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{criterion.name}</span>

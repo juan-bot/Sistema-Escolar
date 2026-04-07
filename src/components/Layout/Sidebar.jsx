@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen, onToggle }) => {
       {isOpen && <div className="sidebar-overlay" onClick={onToggle} />}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-icon">📐</div>
+          <div className="brand-icon">🌸</div>
           <div className="brand-text">
             <h5 className="mb-0">ClassRoom</h5>
             <small>Gestión de Clases</small>

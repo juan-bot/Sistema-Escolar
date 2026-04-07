@@ -200,7 +200,7 @@ const Dashboard = () => {
                       <div className="d-flex align-items-center gap-3">
                         <div
                           className="student-avatar"
-                          style={{ background: uni?.color || '#6366F1' }}
+                          style={{ background: uni?.color || '#E91E86' }}
                         >
                           {cls.name.charAt(0)}
                         </div>

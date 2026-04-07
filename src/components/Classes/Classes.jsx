@@ -103,8 +103,8 @@ const Classes = () => {
                     <span
                       className="class-code"
                       style={{
-                        background: (uni?.color || '#6366F1') + '15',
-                        color: uni?.color || '#6366F1'
+                        background: (uni?.color || '#E91E86') + '15',
+                        color: uni?.color || '#E91E86'
                       }}
                     >
                       {cls.code}
@@ -126,8 +126,8 @@ const Classes = () => {
                     <span
                       className="badge-custom"
                       style={{
-                        background: (uni?.color || '#6366F1') + '15',
-                        color: uni?.color || '#6366F1',
+                        background: (uni?.color || '#E91E86') + '15',
+                        color: uni?.color || '#E91E86',
                         fontSize: 11
                       }}
                     >
