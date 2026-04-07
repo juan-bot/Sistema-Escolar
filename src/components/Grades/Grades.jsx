@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Form } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
 import { BsSave, BsCheckCircle } from 'react-icons/bs'
@@ -10,31 +10,29 @@ const Grades = () => {
   const [localGrades, setLocalGrades] = useState({})
   const [saved, setSaved] = useState(false)
 
-  const classObj = classes.find(c => c.id === selectedClass)
-  const rubricObj = rubrics.find(r => r.id === selectedRubric)
-  const classStudents = students.filter(s => s.classId === selectedClass)
-  const classRubrics = rubrics.filter(r => r.classId === selectedClass)
-  const uni = classObj ? universities.find(u => u.id === classObj.universityId) : null
+  const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
+  const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
+  const classStudents = useMemo(() => students.filter(s => s.classId === selectedClass), [students, selectedClass])
+  const classRubrics = useMemo(() => rubrics.filter(r => r.classId === selectedClass), [rubrics, selectedClass])
+  const uni = useMemo(() => classObj ? universities.find(u => u.id === classObj.universityId) : null, [universities, classObj])
 
   useEffect(() => {
-    if (selectedRubric && rubricObj) {
-      const initial = {}
-      classStudents.forEach(student => {
-        const existingGrade = grades.find(
-          g => g.studentId === student.id && g.rubricId === selectedRubric
-        )
-        initial[student.id] = {}
-        rubricObj.criteria.forEach(criterion => {
-          initial[student.id][criterion.id] = existingGrade?.scores?.[criterion.id] ?? ''
-        })
+    if (!selectedRubric || !rubricObj || classStudents.length === 0) return
+    const initial = {}
+    classStudents.forEach(student => {
+      const existingGrade = grades.find(
+        g => g.studentId === student.id && g.rubricId === selectedRubric
+      )
+      initial[student.id] = {}
+      rubricObj.criteria.forEach(criterion => {
+        initial[student.id][criterion.id] = existingGrade?.scores?.[criterion.id] ?? ''
       })
-      setLocalGrades(initial)
-    }
-  }, [selectedRubric, selectedClass])
+    })
+    setLocalGrades(initial)
+  }, [selectedRubric, classStudents, grades, rubricObj])
 
   const handleScoreChange = (studentId, criterionId, value) => {
-    const maxScore = rubricObj.criteria.find(c => c.id === criterionId)?.maxScore || 100
-    const num = value === '' ? '' : Math.min(Math.max(0, Number(value)), maxScore)
+    const num = value === '' ? '' : Math.min(Math.max(0, Number(value)), 10)
     setLocalGrades(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], [criterionId]: num }
@@ -47,16 +45,16 @@ const Grades = () => {
     let total = 0
     rubricObj.criteria.forEach(criterion => {
       const score = Number(localGrades[studentId]?.[criterion.id]) || 0
-      const percentage = score / criterion.maxScore
+      const percentage = score / 10
       total += percentage * criterion.weight
     })
-    return Math.round(total * 100) / 100
+    return Math.round(total / 10 * 100) / 100
   }
 
   const getGradeColor = (grade) => {
-    if (grade >= 90) return 'var(--success)'
-    if (grade >= 80) return 'var(--info)'
-    if (grade >= 70) return 'var(--warning)'
+    if (grade >= 9) return 'var(--success)'
+    if (grade >= 8) return 'var(--info)'
+    if (grade >= 7) return 'var(--warning)'
     return 'var(--danger)'
   }
 
@@ -181,7 +179,7 @@ const Grades = () => {
                     <th key={c.id} style={{ textAlign: 'center', minWidth: 120 }}>
                       <div>{c.name}</div>
                       <small style={{ fontWeight: 400, textTransform: 'none' }}>
-                        ({c.weight}% &bull; Máx {c.maxScore})
+                        ({c.weight}%)
                       </small>
                     </th>
                   ))}
@@ -205,7 +203,7 @@ const Grades = () => {
                             type="number"
                             className="grade-input"
                             min="0"
-                            max={criterion.maxScore}
+                            max={10}
                             value={localGrades[student.id]?.[criterion.id] ?? ''}
                             onChange={e => handleScoreChange(student.id, criterion.id, e.target.value)}
                             placeholder="—"

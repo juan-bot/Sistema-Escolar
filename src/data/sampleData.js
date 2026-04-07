@@ -115,10 +115,10 @@ export const sampleData = {
       classId: '1',
       name: 'Evaluación Parcial 1',
       criteria: [
-        { id: 'c1', name: 'Examen Teórico', description: 'Evaluación escrita de conceptos fundamentales', maxScore: 100, weight: 40 },
-        { id: 'c2', name: 'Tareas y Ejercicios', description: 'Ejercicios y problemas asignados semanalmente', maxScore: 100, weight: 20 },
-        { id: 'c3', name: 'Proyecto Integrador', description: 'Proyecto de aplicación práctica en equipo', maxScore: 100, weight: 25 },
-        { id: 'c4', name: 'Participación', description: 'Participación activa y asistencia a clase', maxScore: 100, weight: 15 }
+        { id: 'c1', name: 'Examen Teórico', description: 'Evaluación escrita de conceptos fundamentales', maxScore: 10, weight: 40 },
+        { id: 'c2', name: 'Tareas y Ejercicios', description: 'Ejercicios y problemas asignados semanalmente', maxScore: 10, weight: 20 },
+        { id: 'c3', name: 'Proyecto Integrador', description: 'Proyecto de aplicación práctica en equipo', maxScore: 10, weight: 25 },
+        { id: 'c4', name: 'Participación', description: 'Participación activa y asistencia a clase', maxScore: 10, weight: 15 }
       ],
       createdAt: '2024-01-20T00:00:00.000Z'
     },
@@ -127,9 +127,9 @@ export const sampleData = {
       classId: '3',
       name: 'Evaluación Continua',
       criteria: [
-        { id: 'c5', name: 'Quizzes Semanales', description: 'Evaluaciones rápidas cada semana', maxScore: 100, weight: 30 },
-        { id: 'c6', name: 'Prácticas de Laboratorio', description: 'Ejercicios prácticos en laboratorio', maxScore: 100, weight: 30 },
-        { id: 'c7', name: 'Examen Final', description: 'Evaluación final comprensiva del curso', maxScore: 100, weight: 40 }
+        { id: 'c5', name: 'Quizzes Semanales', description: 'Evaluaciones rápidas cada semana', maxScore: 10, weight: 30 },
+        { id: 'c6', name: 'Prácticas de Laboratorio', description: 'Ejercicios prácticos en laboratorio', maxScore: 10, weight: 30 },
+        { id: 'c7', name: 'Examen Final', description: 'Evaluación final comprensiva del curso', maxScore: 10, weight: 40 }
       ],
       createdAt: '2024-01-25T00:00:00.000Z'
     },
@@ -138,10 +138,10 @@ export const sampleData = {
       classId: '5',
       name: 'Evaluación Semestral',
       criteria: [
-        { id: 'c8', name: 'Exámenes Parciales', description: 'Promedio de exámenes parciales', maxScore: 100, weight: 35 },
-        { id: 'c9', name: 'Trabajo Final', description: 'Investigación y presentación final', maxScore: 100, weight: 30 },
-        { id: 'c10', name: 'Tareas', description: 'Entregas semanales de ejercicios', maxScore: 100, weight: 20 },
-        { id: 'c11', name: 'Asistencia y Participación', description: 'Asistencia regular y participación activa', maxScore: 100, weight: 15 }
+        { id: 'c8', name: 'Exámenes Parciales', description: 'Promedio de exámenes parciales', maxScore: 10, weight: 35 },
+        { id: 'c9', name: 'Trabajo Final', description: 'Investigación y presentación final', maxScore: 10, weight: 30 },
+        { id: 'c10', name: 'Tareas', description: 'Entregas semanales de ejercicios', maxScore: 10, weight: 20 },
+        { id: 'c11', name: 'Asistencia y Participación', description: 'Asistencia regular y participación activa', maxScore: 10, weight: 15 }
       ],
       createdAt: '2024-02-05T00:00:00.000Z'
     }

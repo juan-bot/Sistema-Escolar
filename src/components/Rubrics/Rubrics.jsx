@@ -15,7 +15,7 @@ const Rubrics = () => {
   const [form, setForm] = useState({
     classId: '',
     name: '',
-    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 100, weight: 100 }]
+    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100 }]
   })
 
   const filteredRubrics = filterClass === 'all'
@@ -48,14 +48,14 @@ const Rubrics = () => {
     setForm({
       classId: '',
       name: '',
-      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 100, weight: 100 }]
+      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100 }]
     })
   }
 
   const addCriterion = () => {
     setForm({
       ...form,
-      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 100, weight: 0 }]
+      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 10, weight: 0 }]
     })
   }
 
@@ -171,7 +171,7 @@ const Rubrics = () => {
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Máx.</div>
-                            <strong>{criterion.maxScore}</strong>
+                            <strong>10</strong>
                           </div>
                         </div>
                       )
@@ -296,16 +296,6 @@ const Rubrics = () => {
                     value={criterion.weight}
                     onChange={e => updateCriterion(criterion.id, 'weight', Number(e.target.value))}
                     style={{ width: 90 }}
-                    required
-                  />
-                  <Form.Control
-                    size="sm"
-                    type="number"
-                    placeholder="Máx"
-                    min="1"
-                    value={criterion.maxScore}
-                    onChange={e => updateCriterion(criterion.id, 'maxScore', Number(e.target.value))}
-                    style={{ width: 80 }}
                     required
                   />
                   {form.criteria.length > 1 && (
