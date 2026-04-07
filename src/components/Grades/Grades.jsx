@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Form } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsSave, BsCheckCircle } from 'react-icons/bs'
+import { BsSave, BsCheckCircle, BsDownload } from 'react-icons/bs'
+import * as XLSX from 'xlsx'
 
 const Grades = () => {
   const { universities, classes, students, rubrics, grades, addGrade, updateGrade } = useApp()
@@ -77,6 +78,26 @@ const Grades = () => {
     setTimeout(() => setSaved(false), 3000)
   }
 
+  const handleExport = () => {
+    const rows = classStudents.map(student => {
+      const row = {
+        'Alumno': student.name,
+        'Matrícula': student.matricula || ''
+      }
+      rubricObj.criteria.forEach(criterion => {
+        row[criterion.name] = Number(localGrades[student.id]?.[criterion.id]) || 0
+      })
+      row['Calificación Final'] = calculateFinalGrade(student.id)
+      return row
+    })
+
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Calificaciones')
+    const fileName = `${uni?.abbreviation || 'Universidad'} - ${classObj?.name || 'Clase'} - ${rubricObj.name}.xlsx`
+    XLSX.writeFile(wb, fileName)
+  }
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -85,12 +106,17 @@ const Grades = () => {
           <p>Califica a tus alumnos usando las rúbricas definidas</p>
         </div>
         {selectedRubric && classStudents.length > 0 && (
-          <button className="btn btn-primary-custom" onClick={handleSave}>
-            {saved
-              ? <><BsCheckCircle size={18} /> ¡Guardado!</>
-              : <><BsSave size={18} /> Guardar Calificaciones</>
-            }
-          </button>
+          <div className="d-flex gap-2">
+            <button className="btn btn-outline-custom" onClick={handleExport}>
+              <BsDownload size={18} /> Exportar Excel
+            </button>
+            <button className="btn btn-primary-custom" onClick={handleSave}>
+              {saved
+                ? <><BsCheckCircle size={18} /> ¡Guardado!</>
+                : <><BsSave size={18} /> Guardar Calificaciones</>
+              }
+            </button>
+          </div>
         )}
       </div>
 
