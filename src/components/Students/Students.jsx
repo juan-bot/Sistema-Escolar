@@ -284,7 +284,6 @@ const Students = () => {
                     placeholder="alumno@universidad.edu.mx"
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
-                    required
                   />
                 </Form.Group>
               </Col>
@@ -296,7 +295,6 @@ const Students = () => {
                     placeholder="MAT2024001"
                     value={form.matricula}
                     onChange={e => setForm({ ...form, matricula: e.target.value })}
-                    required
                   />
                 </Form.Group>
               </Col>

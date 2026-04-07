@@ -188,7 +188,6 @@ const Classes = () => {
                     placeholder="Ej: MAT-301"
                     value={form.code}
                     onChange={e => setForm({ ...form, code: e.target.value })}
-                    required
                   />
                 </Form.Group>
               </Col>
