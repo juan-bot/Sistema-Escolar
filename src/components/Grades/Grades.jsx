@@ -41,11 +41,31 @@ const Grades = () => {
     setSaved(false)
   }
 
+  // Calculate a student's grade for a referenced rubric (parcial)
+  const calculateRubricRefGrade = (studentId, rubricRefId) => {
+    const refRubric = rubrics.find(r => r.id === rubricRefId)
+    if (!refRubric) return 0
+    const studentGrade = grades.find(g => g.studentId === studentId && g.rubricId === rubricRefId)
+    if (!studentGrade?.scores) return 0
+    let total = 0
+    refRubric.criteria.forEach(criterion => {
+      const score = Number(studentGrade.scores[criterion.id]) || 0
+      const percentage = score / 10
+      total += percentage * criterion.weight
+    })
+    return Math.round(total / 10 * 100) / 100
+  }
+
   const calculateFinalGrade = (studentId) => {
     if (!rubricObj || !localGrades[studentId]) return 0
     let total = 0
     rubricObj.criteria.forEach(criterion => {
-      const score = Number(localGrades[studentId]?.[criterion.id]) || 0
+      let score
+      if (criterion.type === 'rubric_ref') {
+        score = calculateRubricRefGrade(studentId, criterion.rubricRefId)
+      } else {
+        score = Number(localGrades[studentId]?.[criterion.id]) || 0
+      }
       const percentage = score / 10
       total += percentage * criterion.weight
     })
@@ -85,7 +105,11 @@ const Grades = () => {
         'Matrícula': student.matricula || ''
       }
       rubricObj.criteria.forEach(criterion => {
-        row[criterion.name] = Number(localGrades[student.id]?.[criterion.id]) || 0
+        if (criterion.type === 'rubric_ref') {
+          row[criterion.name] = calculateRubricRefGrade(student.id, criterion.rubricRefId)
+        } else {
+          row[criterion.name] = Number(localGrades[student.id]?.[criterion.id]) || 0
+        }
       })
       row['Calificación Final'] = calculateFinalGrade(student.id)
       return row
@@ -205,7 +229,7 @@ const Grades = () => {
                     <th key={c.id} style={{ textAlign: 'center', minWidth: 120 }}>
                       <div>{c.name}</div>
                       <small style={{ fontWeight: 400, textTransform: 'none' }}>
-                        ({c.weight}%)
+                        ({c.weight}%){c.type === 'rubric_ref' ? ' 📋' : ''}
                       </small>
                     </th>
                   ))}
@@ -225,15 +249,26 @@ const Grades = () => {
                       </td>
                       {rubricObj.criteria.map(criterion => (
                         <td key={criterion.id} style={{ textAlign: 'center' }}>
-                          <input
-                            type="number"
-                            className="grade-input"
-                            min="0"
-                            max={10}
-                            value={localGrades[student.id]?.[criterion.id] ?? ''}
-                            onChange={e => handleScoreChange(student.id, criterion.id, e.target.value)}
-                            placeholder="—"
-                          />
+                          {criterion.type === 'rubric_ref' ? (
+                            <span style={{
+                              fontSize: 16,
+                              fontWeight: 700,
+                              color: getGradeColor(calculateRubricRefGrade(student.id, criterion.rubricRefId)),
+                              opacity: 0.9
+                            }}>
+                              {calculateRubricRefGrade(student.id, criterion.rubricRefId).toFixed(1)}
+                            </span>
+                          ) : (
+                            <input
+                              type="number"
+                              className="grade-input"
+                              min="0"
+                              max={10}
+                              value={localGrades[student.id]?.[criterion.id] ?? ''}
+                              onChange={e => handleScoreChange(student.id, criterion.id, e.target.value)}
+                              placeholder="—"
+                            />
+                          )}
                         </td>
                       ))}
                       <td style={{ textAlign: 'center' }}>

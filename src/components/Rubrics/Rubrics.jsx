@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Row, Col, Modal, Form, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsPlus, BsPencil, BsTrash } from 'react-icons/bs'
+import { BsPlus, BsPencil, BsTrash, BsTrophy } from 'react-icons/bs'
 import { v4 as uuidv4 } from 'uuid'
 
 const CRITERION_COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6']
@@ -15,12 +15,16 @@ const Rubrics = () => {
   const [form, setForm] = useState({
     classId: '',
     name: '',
-    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100 }]
+    isFinal: false,
+    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }]
   })
 
   const filteredRubrics = filterClass === 'all'
     ? rubrics
     : rubrics.filter(r => r.classId === filterClass)
+
+  // Get non-final rubrics for the selected class (to reference in final rubric)
+  const availableParciales = rubrics.filter(r => r.classId === form.classId && !r.isFinal && r.id !== editingRubric?.id)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -37,6 +41,7 @@ const Rubrics = () => {
     setForm({
       classId: rubric.classId,
       name: rubric.name,
+      isFinal: rubric.isFinal || false,
       criteria: rubric.criteria.map(c => ({ ...c }))
     })
     setShowModal(true)
@@ -48,14 +53,32 @@ const Rubrics = () => {
     setForm({
       classId: '',
       name: '',
-      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100 }]
+      isFinal: false,
+      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }]
     })
   }
 
   const addCriterion = () => {
     setForm({
       ...form,
-      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 10, weight: 0 }]
+      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 10, weight: 0, type: 'custom' }]
+    })
+  }
+
+  const addRubricReference = (rubricId) => {
+    const ref = rubrics.find(r => r.id === rubricId)
+    if (!ref) return
+    setForm({
+      ...form,
+      criteria: [...form.criteria, {
+        id: uuidv4(),
+        name: ref.name,
+        description: `Promedio de ${ref.name}`,
+        maxScore: 10,
+        weight: 0,
+        type: 'rubric_ref',
+        rubricRefId: rubricId
+      }]
     })
   }
 
@@ -73,6 +96,10 @@ const Rubrics = () => {
   }
 
   const totalWeight = form.criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0)
+
+  // Rubric IDs already referenced in current final rubric
+  const referencedRubricIds = form.criteria.filter(c => c.type === 'rubric_ref').map(c => c.rubricRefId)
+  const unreferencedParciales = availableParciales.filter(r => !referencedRubricIds.includes(r.id))
 
   return (
     <div className="fade-in">
@@ -124,9 +151,16 @@ const Rubrics = () => {
                 <div className={`rubric-card fade-in fade-in-delay-${(i % 4) + 1}`}>
                   <div className="rubric-header">
                     <div>
-                      <h5 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
-                        {rubric.name}
-                      </h5>
+                      <div className="d-flex align-items-center gap-2" style={{ marginBottom: 4 }}>
+                        <h5 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+                          {rubric.name}
+                        </h5>
+                        {rubric.isFinal && (
+                          <span className="badge-custom" style={{ background: '#F59E0B20', color: '#F59E0B', fontSize: 11 }}>
+                            <BsTrophy size={12} /> Final
+                          </span>
+                        )}
+                      </div>
                       <div className="d-flex gap-2 flex-wrap">
                         {uni && (
                           <span
@@ -166,7 +200,14 @@ const Rubrics = () => {
                             {criterion.weight}%
                           </div>
                           <div className="criterion-info">
-                            <h6>{criterion.name}</h6>
+                            <div className="d-flex align-items-center gap-2">
+                              <h6>{criterion.name}</h6>
+                              {criterion.type === 'rubric_ref' && (
+                                <span style={{ fontSize: 10, background: '#6366F115', color: '#6366F1', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                  Parcial
+                                </span>
+                              )}
+                            </div>
                             <p>{criterion.description}</p>
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -209,12 +250,12 @@ const Rubrics = () => {
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
             <Row className="mb-3">
-              <Col md={6}>
+              <Col md={5}>
                 <Form.Group>
                   <Form.Label>Clase</Form.Label>
                   <Form.Select
                     value={form.classId}
-                    onChange={e => setForm({ ...form, classId: e.target.value })}
+                    onChange={e => setForm({ ...form, classId: e.target.value, criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }] })}
                     required
                   >
                     <option value="">Seleccionar clase...</option>
@@ -229,7 +270,7 @@ const Rubrics = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={5}>
                 <Form.Group>
                   <Form.Label>Nombre de la Rúbrica</Form.Label>
                   <Form.Control
@@ -242,6 +283,30 @@ const Rubrics = () => {
                 </Form.Group>
               </Col>
             </Row>
+            <Form.Group className="mb-3">
+              <div
+                onClick={() => setForm({ ...form, isFinal: !form.isFinal })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: form.isFinal ? '2px solid #F59E0B' : '2px solid var(--border)',
+                  background: form.isFinal ? '#F59E0B10' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ fontSize: 20 }}>{form.isFinal ? '🏆' : '○'}</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>Rúbrica Final</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Combina parciales y otros criterios para la calificación final
+                  </div>
+                </div>
+              </div>
+            </Form.Group>
 
             <div className="d-flex align-items-center justify-content-between mb-3">
               <h6 className="mb-0" style={{ fontSize: 14, fontWeight: 600 }}>
@@ -266,27 +331,63 @@ const Rubrics = () => {
               </div>
             </div>
 
+            {form.isFinal && form.classId && unreferencedParciales.length > 0 && (
+              <div style={{
+                background: '#F59E0B10',
+                border: '1px dashed #F59E0B',
+                borderRadius: 'var(--radius-sm)',
+                padding: 12,
+                marginBottom: 12
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#F59E0B' }}>
+                  <BsTrophy size={14} /> Agregar parcial como criterio:
+                </div>
+                <div className="d-flex gap-2 flex-wrap">
+                  {unreferencedParciales.map(r => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="btn btn-outline-custom"
+                      style={{ padding: '4px 10px', fontSize: 12 }}
+                      onClick={() => addRubricReference(r.id)}
+                    >
+                      <BsPlus size={14} /> {r.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {form.criteria.map((criterion) => (
               <div
                 key={criterion.id}
                 style={{
-                  background: 'var(--bg-main)',
+                  background: criterion.type === 'rubric_ref' ? '#6366F108' : 'var(--bg-main)',
                   borderRadius: 'var(--radius-sm)',
                   padding: 16,
                   marginBottom: 12,
-                  border: '1px solid var(--border)'
+                  border: criterion.type === 'rubric_ref' ? '1px solid #6366F130' : '1px solid var(--border)'
                 }}
               >
                 <div className="d-flex gap-2 mb-2">
-                  <Form.Control
-                    size="sm"
-                    type="text"
-                    placeholder="Nombre del criterio"
-                    value={criterion.name}
-                    onChange={e => updateCriterion(criterion.id, 'name', e.target.value)}
-                    required
-                    style={{ fontWeight: 600 }}
-                  />
+                  {criterion.type === 'rubric_ref' ? (
+                    <div className="d-flex align-items-center gap-2" style={{ flex: 1 }}>
+                      <span style={{ fontSize: 10, background: '#6366F115', color: '#6366F1', padding: '2px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>
+                        Parcial
+                      </span>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{criterion.name}</span>
+                    </div>
+                  ) : (
+                    <Form.Control
+                      size="sm"
+                      type="text"
+                      placeholder="Nombre del criterio"
+                      value={criterion.name}
+                      onChange={e => updateCriterion(criterion.id, 'name', e.target.value)}
+                      required
+                      style={{ fontWeight: 600 }}
+                    />
+                  )}
                   <Form.Control
                     size="sm"
                     type="number"
