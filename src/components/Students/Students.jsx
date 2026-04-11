@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
-import { Row, Col, Modal, Form, Button } from 'react-bootstrap'
+import React, { useState, useRef } from 'react'
+import { Row, Col, Modal, Form, Button, Alert, Spinner } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsPlus, BsPencil, BsTrash, BsSearch } from 'react-icons/bs'
+import { BsPlus, BsPencil, BsTrash, BsSearch, BsFileEarmarkSpreadsheet, BsUpload } from 'react-icons/bs'
+import * as XLSX from 'xlsx'
 
 const AVATAR_COLORS = [
   '#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899',
@@ -20,6 +21,12 @@ const Students = () => {
   const [filterClass, setFilterClass] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [form, setForm] = useState({ classId: '', name: '', email: '', matricula: '' })
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importClassId, setImportClassId] = useState('')
+  const [importPreview, setImportPreview] = useState([])
+  const [importError, setImportError] = useState('')
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef(null)
 
   const availableClasses = filterUni === 'all'
     ? classes
@@ -87,6 +94,99 @@ const Students = () => {
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
   }
 
+  const handleImportFile = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setImportError('')
+    setImportPreview([])
+
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const raw = XLSX.utils.sheet_to_json(ws, { defval: '' })
+
+        if (raw.length === 0) {
+          setImportError('El archivo está vacío.')
+          return
+        }
+
+        // Normalize column names to lowercase for flexible matching
+        const normalize = (s) => String(s).toLowerCase().trim()
+        const originalKeys = Object.keys(raw[0])
+        const keyMap = {}
+        originalKeys.forEach(k => {
+          const n = normalize(k)
+          if (n.includes('matricula') || n.includes('matrícula')) keyMap[k] = 'matricula'
+          else if (n === 'alumno' || n === 'alumnos') keyMap[k] = 'name'
+        })
+
+        const hasMatricula = Object.values(keyMap).includes('matricula')
+        const hasName = Object.values(keyMap).includes('name')
+
+        if (!hasMatricula && !hasName) {
+          setImportError('No se encontraron columnas de "Matrícula" ni "Alumno". Asegúrate de que el Excel tenga esas columnas.')
+          return
+        }
+
+        const rows = raw.map(row => {
+          const mapped = { name: '', matricula: '', email: '' }
+          for (const [origKey, field] of Object.entries(keyMap)) {
+            mapped[field] = String(row[origKey] || '').trim()
+          }
+          return mapped
+        }).filter(r => r.name || r.matricula)
+
+        if (rows.length === 0) {
+          setImportError('No se encontraron filas con datos.')
+          return
+        }
+
+        setImportPreview(rows)
+      } catch {
+        setImportError('Error al leer el archivo. Asegúrate de que sea un archivo Excel válido (.xlsx, .xls).')
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
+  const handleImportSubmit = async () => {
+    if (!importClassId) {
+      setImportError('Selecciona una clase.')
+      return
+    }
+    if (importPreview.length === 0) {
+      setImportError('No hay alumnos para importar.')
+      return
+    }
+    setImporting(true)
+    try {
+      for (const row of importPreview) {
+        await addStudent({
+          classId: importClassId,
+          name: row.name,
+          email: row.email || '',
+          matricula: row.matricula
+        })
+      }
+      handleCloseImportModal()
+    } catch {
+      setImportError('Error al importar alumnos. Intenta de nuevo.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleCloseImportModal = () => {
+    setShowImportModal(false)
+    setImportClassId('')
+    setImportPreview([])
+    setImportError('')
+    setImporting(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -94,9 +194,14 @@ const Students = () => {
           <h2>Alumnos</h2>
           <p>Gestiona a tus alumnos por clase y universidad</p>
         </div>
-        <button className="btn btn-primary-custom" onClick={handleOpenAdd}>
-          <BsPlus size={20} /> Agregar Alumno
-        </button>
+        <div className="d-flex gap-2">
+          <button className="btn btn-primary-custom" onClick={() => setShowImportModal(true)} style={{ background: '#10B981', borderColor: '#10B981' }}>
+            <BsFileEarmarkSpreadsheet size={18} /> Importar Excel
+          </button>
+          <button className="btn btn-primary-custom" onClick={handleOpenAdd}>
+            <BsPlus size={20} /> Agregar Alumno
+          </button>
+        </div>
       </div>
 
       <div className="filter-bar">
@@ -307,6 +412,85 @@ const Students = () => {
             </button>
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* Import Excel Modal */}
+      <Modal show={showImportModal} onHide={handleCloseImportModal} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title><BsFileEarmarkSpreadsheet className="me-2" />Importar Alumnos desde Excel</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {importError && <Alert variant="danger" onClose={() => setImportError('')} dismissible>{importError}</Alert>}
+
+          <Form.Group className="mb-3">
+            <Form.Label>Clase destino</Form.Label>
+            <Form.Select
+              value={importClassId}
+              onChange={e => setImportClassId(e.target.value)}
+              required
+            >
+              <option value="">Seleccionar clase...</option>
+              {classes.map(cls => {
+                const uni = universities.find(u => u.id === cls.universityId)
+                return (
+                  <option key={cls.id} value={cls.id}>
+                    {uni?.icon} {cls.name} ({cls.code}) - {uni?.abbreviation}
+                  </option>
+                )
+              })}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Archivo Excel (.xlsx, .xls)</Form.Label>
+            <Form.Control
+              type="file"
+              accept=".xlsx,.xls"
+              ref={fileInputRef}
+              onChange={handleImportFile}
+            />
+            <Form.Text className="text-muted">
+              El archivo debe tener columnas de "Matrícula" y "Alumnos" (o "Nombre").
+            </Form.Text>
+          </Form.Group>
+
+          {importPreview.length > 0 && (
+            <div>
+              <h6 className="mb-2">Vista previa ({importPreview.length} alumnos)</h6>
+              <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 8 }}>
+                <table className="custom-table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Nombre</th>
+                      <th>Matrícula</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.map((row, i) => (
+                      <tr key={i}>
+                        <td>{i + 1}</td>
+                        <td>{row.name || <span className="text-muted">—</span>}</td>
+                        <td><code>{row.matricula || '—'}</code></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseImportModal} disabled={importing}>Cancelar</Button>
+          <button
+            className="btn btn-primary-custom"
+            style={{ background: '#10B981', borderColor: '#10B981' }}
+            onClick={handleImportSubmit}
+            disabled={importing || importPreview.length === 0 || !importClassId}
+          >
+            {importing ? <><Spinner size="sm" className="me-2" />Importando...</> : <><BsUpload className="me-2" />Importar {importPreview.length} Alumnos</>}
+          </button>
+        </Modal.Footer>
       </Modal>
 
       {/* Delete Confirmation */}
