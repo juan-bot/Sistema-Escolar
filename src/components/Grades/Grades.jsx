@@ -5,7 +5,7 @@ import { BsSave, BsCheckCircle, BsDownload } from 'react-icons/bs'
 import * as XLSX from 'xlsx'
 
 const Grades = () => {
-  const { universities, classes, students, rubrics, grades, addGrade, updateGrade } = useApp()
+  const { universities, classes, students, rubrics, grades, attendance, addGrade, updateGrade } = useApp()
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedRubric, setSelectedRubric] = useState('')
   const [localGrades, setLocalGrades] = useState({})
@@ -41,6 +41,27 @@ const Grades = () => {
     setSaved(false)
   }
 
+  // Calculate attendance grade for a student in the selected class (0-10 scale)
+  const calculateAttendanceGrade = (studentId) => {
+    const classSessions = attendance.filter(a => a.classId === selectedClass)
+    if (classSessions.length === 0) return 0
+    let score = 0
+    let total = 0
+    classSessions.forEach(session => {
+      const rec = (session.records || []).find(r => r.studentId === studentId)
+      if (rec) {
+        total++
+        if (rec.status === 'present') score += 1
+        else if (rec.status === 'late') score += 0.5
+        else if (rec.status === 'justified') score += 1
+        // absent = 0
+      } else {
+        total++
+      }
+    })
+    return total > 0 ? Math.round((score / total) * 10 * 100) / 100 : 0
+  }
+
   // Calculate a student's grade for a referenced rubric (parcial)
   const calculateRubricRefGrade = (studentId, rubricRefId) => {
     const refRubric = rubrics.find(r => r.id === rubricRefId)
@@ -63,6 +84,8 @@ const Grades = () => {
       let score
       if (criterion.type === 'rubric_ref') {
         score = calculateRubricRefGrade(studentId, criterion.rubricRefId)
+      } else if (criterion.type === 'attendance') {
+        score = calculateAttendanceGrade(studentId)
       } else {
         score = Number(localGrades[studentId]?.[criterion.id]) || 0
       }
@@ -107,6 +130,8 @@ const Grades = () => {
       rubricObj.criteria.forEach(criterion => {
         if (criterion.type === 'rubric_ref') {
           row[criterion.name] = calculateRubricRefGrade(student.id, criterion.rubricRefId)
+        } else if (criterion.type === 'attendance') {
+          row[criterion.name] = calculateAttendanceGrade(student.id)
         } else {
           row[criterion.name] = Number(localGrades[student.id]?.[criterion.id]) || 0
         }
@@ -229,7 +254,7 @@ const Grades = () => {
                     <th key={c.id} style={{ textAlign: 'center', minWidth: 120 }}>
                       <div>{c.name}</div>
                       <small style={{ fontWeight: 400, textTransform: 'none' }}>
-                        ({c.weight}%){c.type === 'rubric_ref' ? ' 📋' : ''}
+                        ({c.weight}%){c.type === 'rubric_ref' ? ' 📋' : c.type === 'attendance' ? ' 📅' : ''}
                       </small>
                     </th>
                   ))}
@@ -257,6 +282,15 @@ const Grades = () => {
                               opacity: 0.9
                             }}>
                               {calculateRubricRefGrade(student.id, criterion.rubricRefId).toFixed(1)}
+                            </span>
+                          ) : criterion.type === 'attendance' ? (
+                            <span style={{
+                              fontSize: 16,
+                              fontWeight: 700,
+                              color: getGradeColor(calculateAttendanceGrade(student.id)),
+                              opacity: 0.9
+                            }}>
+                              {calculateAttendanceGrade(student.id).toFixed(1)}
                             </span>
                           ) : (
                             <input

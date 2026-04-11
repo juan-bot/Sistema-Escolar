@@ -8,6 +8,7 @@ import Classes from './components/Classes/Classes'
 import Students from './components/Students/Students'
 import Rubrics from './components/Rubrics/Rubrics'
 import Grades from './components/Grades/Grades'
+import Attendance from './components/Attendance/Attendance'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './index.css'
 
@@ -21,6 +22,7 @@ function App() {
             <Route path="/universidades" element={<Universities />} />
             <Route path="/clases" element={<Classes />} />
             <Route path="/alumnos" element={<Students />} />
+            <Route path="/asistencia" element={<Attendance />} />
             <Route path="/rubricas" element={<Rubrics />} />
             <Route path="/calificaciones" element={<Grades />} />
           </Route>

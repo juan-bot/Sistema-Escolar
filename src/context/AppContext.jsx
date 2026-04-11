@@ -18,12 +18,13 @@ export const AppProvider = ({ children }) => {
   const [students, setStudents] = useState([])
   const [rubrics, setRubrics] = useState([])
   const [grades, setGrades] = useState([])
+  const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Real-time listeners
   useEffect(() => {
     let loaded = 0
-    const total = 5
+    const total = 6
     const checkLoaded = () => {
       loaded++
       if (loaded >= total) setLoading(false)
@@ -35,6 +36,7 @@ export const AppProvider = ({ children }) => {
       subscribeCollection('students', (data) => { setStudents(data); checkLoaded() }),
       subscribeCollection('rubrics', (data) => { setRubrics(data); checkLoaded() }),
       subscribeCollection('grades', (data) => { setGrades(data); checkLoaded() }),
+      subscribeCollection('attendance', (data) => { setAttendance(data); checkLoaded() }),
     ]
 
     return () => unsubs.forEach(unsub => unsub())
@@ -122,6 +124,19 @@ export const AppProvider = ({ children }) => {
     await updateDocument('grades', id, data)
   }
 
+  // Attendance CRUD
+  const addAttendance = async (session) => {
+    await addDocument('attendance', session)
+  }
+
+  const updateAttendance = async (id, data) => {
+    await updateDocument('attendance', id, data)
+  }
+
+  const deleteAttendance = async (id) => {
+    await deleteDocument('attendance', id)
+  }
+
   // Helpers
   const getClassesByUniversity = (universityId) => classes.filter(c => c.universityId === universityId)
   const getStudentsByClass = (classId) => students.filter(s => s.classId === classId)
@@ -130,12 +145,13 @@ export const AppProvider = ({ children }) => {
   const getClassById = (id) => classes.find(c => c.id === id)
 
   const value = {
-    universities, classes, students, rubrics, grades, loading,
+    universities, classes, students, rubrics, grades, attendance, loading,
     addUniversity, updateUniversity, deleteUniversity,
     addClass, updateClass, deleteClass,
     addStudent, updateStudent, deleteStudent,
     addRubric, updateRubric, deleteRubric,
     addGrade, updateGrade,
+    addAttendance, updateAttendance, deleteAttendance,
     getClassesByUniversity, getStudentsByClass, getRubricsByClass,
     getUniversityById, getClassById
   }

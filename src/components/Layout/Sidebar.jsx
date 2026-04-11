@@ -5,6 +5,7 @@ import {
   BsBuildings,
   BsBook,
   BsPeople,
+  BsCalendarCheck,
   BsClipboardCheck,
   BsBarChartLine
 } from 'react-icons/bs'
@@ -14,6 +15,7 @@ const navItems = [
   { path: '/universidades', icon: BsBuildings, label: 'Universidades' },
   { path: '/clases', icon: BsBook, label: 'Clases' },
   { path: '/alumnos', icon: BsPeople, label: 'Alumnos' },
+  { path: '/asistencia', icon: BsCalendarCheck, label: 'Asistencia' },
   { path: '/rubricas', icon: BsClipboardCheck, label: 'Rúbricas' },
   { path: '/calificaciones', icon: BsBarChartLine, label: 'Calificaciones' }
 ]

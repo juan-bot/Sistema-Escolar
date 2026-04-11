@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Row, Col, Modal, Form, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsPlus, BsPencil, BsTrash, BsTrophy } from 'react-icons/bs'
+import { BsPlus, BsPencil, BsTrash, BsTrophy, BsCalendarCheck } from 'react-icons/bs'
 import { v4 as uuidv4 } from 'uuid'
 
 const CRITERION_COLORS = ['#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899', '#BE185D', '#F9A8D4', '#14B8A6']
@@ -81,6 +81,24 @@ const Rubrics = () => {
       }]
     })
   }
+
+  const addAttendanceCriterion = () => {
+    // Only allow one attendance criterion
+    if (form.criteria.some(c => c.type === 'attendance')) return
+    setForm({
+      ...form,
+      criteria: [...form.criteria, {
+        id: uuidv4(),
+        name: 'Asistencia',
+        description: 'Porcentaje de asistencia calculado automáticamente',
+        maxScore: 10,
+        weight: 0,
+        type: 'attendance'
+      }]
+    })
+  }
+
+  const hasAttendanceCriterion = form.criteria.some(c => c.type === 'attendance')
 
   const removeCriterion = (id) => {
     if (form.criteria.length > 1) {
@@ -205,6 +223,11 @@ const Rubrics = () => {
                               {criterion.type === 'rubric_ref' && (
                                 <span style={{ fontSize: 10, background: '#E91E8615', color: '#E91E86', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
                                   Parcial
+                                </span>
+                              )}
+                              {criterion.type === 'attendance' && (
+                                <span style={{ fontSize: 10, background: '#10B98115', color: '#10B981', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                  <BsCalendarCheck size={10} /> Asistencia
                                 </span>
                               )}
                             </div>
@@ -358,6 +381,28 @@ const Rubrics = () => {
               </div>
             )}
 
+            {form.classId && !hasAttendanceCriterion && (
+              <div style={{
+                background: '#10B98110',
+                border: '1px dashed #10B981',
+                borderRadius: 'var(--radius-sm)',
+                padding: 12,
+                marginBottom: 12
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#10B981' }}>
+                  <BsCalendarCheck size={14} /> Vincular asistencia:
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline-custom"
+                  style={{ padding: '4px 10px', fontSize: 12 }}
+                  onClick={addAttendanceCriterion}
+                >
+                  <BsPlus size={14} /> Asistencia (cálculo automático)
+                </button>
+              </div>
+            )}
+
             {form.criteria.map((criterion) => (
               <div
                 key={criterion.id}
@@ -376,6 +421,13 @@ const Rubrics = () => {
                         Parcial
                       </span>
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{criterion.name}</span>
+                    </div>
+                  ) : criterion.type === 'attendance' ? (
+                    <div className="d-flex align-items-center gap-2" style={{ flex: 1 }}>
+                      <span style={{ fontSize: 10, background: '#10B98115', color: '#10B981', padding: '2px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>
+                        <BsCalendarCheck size={10} /> Asistencia
+                      </span>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>Asistencia (automático)</span>
                     </div>
                   ) : (
                     <Form.Control
