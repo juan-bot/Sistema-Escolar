@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Row, Col, Modal, Form, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsPlus, BsPencil, BsTrash, BsTrophy, BsCalendarCheck } from 'react-icons/bs'
+import { BsPlus, BsPencil, BsTrash, BsTrophy, BsCalendarCheck, BsSliders } from 'react-icons/bs'
 import { v4 as uuidv4 } from 'uuid'
 
 const CRITERION_COLORS = ['#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899', '#BE185D', '#F9A8D4', '#14B8A6']
@@ -16,8 +16,12 @@ const Rubrics = () => {
     classId: '',
     name: '',
     isFinal: false,
-    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }]
+    criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }]
   })
+  const [showSubcriteriaModal, setShowSubcriteriaModal] = useState(false)
+  const [editingCriterionForSub, setEditingCriterionForSub] = useState(null)
+  const [subLabels, setSubLabels] = useState([])
+  const [subcriteriaForm, setSubcriteriaForm] = useState([])
 
   const filteredRubrics = filterClass === 'all'
     ? rubrics
@@ -54,14 +58,14 @@ const Rubrics = () => {
       classId: '',
       name: '',
       isFinal: false,
-      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }]
+      criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }]
     })
   }
 
   const addCriterion = () => {
     setForm({
       ...form,
-      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 10, weight: 0, type: 'custom' }]
+      criteria: [...form.criteria, { id: uuidv4(), name: '', description: '', maxScore: 10, weight: 0, type: 'custom', subcriteria: [] }]
     })
   }
 
@@ -107,11 +111,84 @@ const Rubrics = () => {
   }
 
   const updateCriterion = (id, field, value) => {
-    setForm({
-      ...form,
-      criteria: form.criteria.map(c => c.id === id ? { ...c, [field]: value } : c)
-    })
+    setForm(prev => ({
+      ...prev,
+      criteria: prev.criteria.map(c => c.id === id ? { ...c, [field]: value } : c)
+    }))
   }
+
+  const getMaxPointsForCriterion = (criterion) => {
+    if (!criterion.subcriteria?.length || !criterion.subcriteriaLabels?.length) return 0
+    const maxLabel = Math.max(0, ...criterion.subcriteriaLabels.map(l => Number(l.points) || 0))
+    return maxLabel * criterion.subcriteria.length
+  }
+
+  const openSubcriteriaModal = (criterion) => {
+    setEditingCriterionForSub(criterion)
+    if (criterion.subcriteriaLabels?.length > 0) {
+      setSubLabels(criterion.subcriteriaLabels.map(l => ({ ...l })))
+      setSubcriteriaForm(criterion.subcriteria.map(s => ({ id: s.id, name: s.name })))
+    } else {
+      setSubLabels([
+        { id: uuidv4(), label: 'Malo', points: 0 },
+        { id: uuidv4(), label: 'Regular', points: 3 },
+        { id: uuidv4(), label: 'Bueno', points: 7 },
+        { id: uuidv4(), label: 'Excelente', points: 10 }
+      ])
+      setSubcriteriaForm([{ id: uuidv4(), name: '' }])
+    }
+    setShowSubcriteriaModal(true)
+  }
+
+  const closeSubcriteriaModal = () => {
+    setShowSubcriteriaModal(false)
+    setEditingCriterionForSub(null)
+    setSubLabels([])
+    setSubcriteriaForm([])
+  }
+
+  const saveSubcriteria = () => {
+    setForm(prev => ({
+      ...prev,
+      criteria: prev.criteria.map(c => c.id === editingCriterionForSub.id
+        ? { ...c, subcriteria: subcriteriaForm, subcriteriaLabels: subLabels }
+        : c
+      )
+    }))
+    closeSubcriteriaModal()
+  }
+
+  const addSubcriterium = () => {
+    setSubcriteriaForm(prev => [...prev, { id: uuidv4(), name: '' }])
+  }
+
+  const removeSubcriterium = (subId) => {
+    setSubcriteriaForm(prev => prev.filter(s => s.id !== subId))
+  }
+
+  const updateSubcriteriumName = (subId, value) => {
+    setSubcriteriaForm(prev => prev.map(s => s.id === subId ? { ...s, name: value } : s))
+  }
+
+  const addGlobalLabel = () => {
+    setSubLabels(prev => [...prev, { id: uuidv4(), label: '', points: 0 }])
+  }
+
+  const removeGlobalLabel = (labelId) => {
+    if (subLabels.length <= 1) return
+    setSubLabels(prev => prev.filter(l => l.id !== labelId))
+  }
+
+  const updateGlobalLabelName = (labelId, value) => {
+    setSubLabels(prev => prev.map(l => l.id === labelId ? { ...l, label: value } : l))
+  }
+
+  const updateGlobalLabelPoints = (labelId, value) => {
+    setSubLabels(prev => prev.map(l => l.id === labelId ? { ...l, points: Number(value) } : l))
+  }
+
+  const subMaxLabelPoints = subLabels.length > 0 ? Math.max(0, ...subLabels.map(l => Number(l.points) || 0)) : 0
+  const subTotalMaxPoints = subMaxLabelPoints * subcriteriaForm.length
 
   const totalWeight = form.criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0)
 
@@ -232,6 +309,12 @@ const Rubrics = () => {
                               )}
                             </div>
                             <p>{criterion.description}</p>
+                            {criterion.subcriteria?.length > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#E91E86', marginTop: 4 }}>
+                                <BsSliders size={11} />
+                                {criterion.subcriteria.length} subcriterio{criterion.subcriteria.length !== 1 ? 's' : ''} · Máx: {getMaxPointsForCriterion(criterion)} pts
+                              </div>
+                            )}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Máx.</div>
@@ -278,7 +361,7 @@ const Rubrics = () => {
                   <Form.Label>Clase</Form.Label>
                   <Form.Select
                     value={form.classId}
-                    onChange={e => setForm({ ...form, classId: e.target.value, criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom' }] })}
+                    onChange={e => setForm({ ...form, classId: e.target.value, criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }] })}
                     required
                   >
                     <option value="">Seleccionar clase...</option>
@@ -469,6 +552,34 @@ const Rubrics = () => {
                   value={criterion.description}
                   onChange={e => updateCriterion(criterion.id, 'description', e.target.value)}
                 />
+                {criterion.type === 'custom' && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => openSubcriteriaModal(criterion)}
+                      style={{
+                        background: criterion.subcriteria?.length > 0 ? '#E91E8615' : 'transparent',
+                        border: `1px solid ${criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--border)'}`,
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        color: criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <BsSliders size={12} /> Subcriterios
+                      {criterion.subcriteria?.length > 0 && ` (${criterion.subcriteria.length})`}
+                    </button>
+                    {criterion.subcriteria?.length > 0 && (
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        Total máx: <strong style={{ color: 'var(--text-primary)' }}>{getMaxPointsForCriterion(criterion)} pts</strong>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </Modal.Body>
@@ -508,6 +619,178 @@ const Rubrics = () => {
             </Button>
           </div>
         </Modal.Body>
+      </Modal>
+
+      {/* Subcriteria Modal */}
+      <Modal
+        show={showSubcriteriaModal}
+        onHide={closeSubcriteriaModal}
+        centered
+        size="lg"
+        style={{ zIndex: 1070 }}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 16 }}>
+            <BsSliders size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+            Subcriterios —{' '}
+            <span style={{ color: '#E91E86' }}>{editingCriterionForSub?.name || 'Criterio'}</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '68vh', overflowY: 'auto', padding: '16px 20px' }}>
+          <div style={{
+            fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16,
+            borderLeft: '3px solid #E91E86',
+            background: '#E91E8608', borderRadius: '0 6px 6px 0', padding: '8px 12px'
+          }}>
+            Los puntos de cada nivel son libres — el máximo total es la suma de los mejores puntajes de cada subcriterio.
+            Calificación del criterio:{' '}
+            <strong>(puntos obtenidos ÷ puntos máximos) × {editingCriterionForSub?.weight ?? 0}%</strong>
+          </div>
+
+          {/* Sección 1: Niveles de evaluación globales */}
+          <div style={{
+            background: 'var(--bg-main)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: 14,
+            marginBottom: 20
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: '#E91E86' }}>①</span> Niveles de evaluación
+              <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-secondary)' }}>
+                — aplican a todos los subcriterios
+              </span>
+            </div>
+            {/* Column headers */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6, paddingRight: 28 }}>
+              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Etiqueta</div>
+              <div style={{ width: 90, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>Puntos</div>
+            </div>
+            {subLabels.map((lbl, li) => (
+              <div key={lbl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', width: 16, flexShrink: 0 }}>{li + 1}.</span>
+                <Form.Control
+                  size="sm"
+                  type="text"
+                  placeholder="Nombre del nivel"
+                  value={lbl.label}
+                  onChange={e => updateGlobalLabelName(lbl.id, e.target.value)}
+                  style={{ flex: 1, fontWeight: 600 }}
+                />
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={lbl.points}
+                  onChange={e => updateGlobalLabelPoints(lbl.id, e.target.value)}
+                  style={{ width: 90, textAlign: 'center' }}
+                />
+                {subLabels.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeGlobalLabel(lbl.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '1px 3px', width: 20, flexShrink: 0 }}
+                  >
+                    <BsTrash size={11} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addGlobalLabel}
+              style={{
+                background: 'none',
+                border: '1px dashed var(--border)',
+                borderRadius: 6,
+                padding: '4px 12px',
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                marginTop: 4
+              }}
+            >
+              <BsPlus size={14} /> Agregar nivel
+            </button>
+          </div>
+
+          {/* Sección 2: Subcriterios */}
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: '#E91E86' }}>②</span> Subcriterios
+          </div>
+
+          {subcriteriaForm.map((sub, si) => (
+            <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{
+                minWidth: 24, height: 24, borderRadius: '50%',
+                background: '#E91E8620', color: '#E91E86',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 700, flexShrink: 0
+              }}>
+                {si + 1}
+              </div>
+              <Form.Control
+                size="sm"
+                type="text"
+                placeholder="Nombre del subcriterio (ej: Escritura)"
+                value={sub.name}
+                onChange={e => updateSubcriteriumName(sub.id, e.target.value)}
+                style={{ fontWeight: 600, flex: 1 }}
+              />
+              {subcriteriaForm.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeSubcriterium(sub.id)}
+                  style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}
+                >
+                  <BsTrash size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addSubcriterium}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: '2px dashed var(--border)',
+              borderRadius: 8,
+              padding: '9px',
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              marginTop: 4
+            }}
+          >
+            <BsPlus size={16} /> Agregar subcriterio
+          </button>
+        </Modal.Body>
+        <Modal.Footer style={{ justifyContent: 'space-between', flexWrap: 'nowrap', gap: 12 }}>
+          <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+            <div>
+              Puntos máximos totales:{' '}
+              <strong style={{ color: '#E91E86', fontSize: 15 }}>{subTotalMaxPoints} pts</strong>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 6 }}>
+                ({subcriteriaForm.length} subcriterio{subcriteriaForm.length !== 1 ? 's' : ''} × {subMaxLabelPoints} pts máx)
+              </span>
+            </div>
+            {subTotalMaxPoints > 0 && editingCriterionForSub?.weight > 0 && (
+              <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                100% → <strong style={{ color: 'var(--text-primary)' }}>{editingCriterionForSub.weight}%</strong>
+                {' '}&nbsp;|&nbsp; 50% → <strong style={{ color: 'var(--text-primary)' }}>{(editingCriterionForSub.weight * 0.5).toFixed(1)}%</strong>
+              </div>
+            )}
+          </div>
+          <div className="d-flex gap-2" style={{ flexShrink: 0 }}>
+            <Button variant="secondary" onClick={closeSubcriteriaModal}>Cancelar</Button>
+            <button type="button" className="btn btn-primary-custom" onClick={saveSubcriteria}>
+              Guardar Subcriterios
+            </button>
+          </div>
+        </Modal.Footer>
       </Modal>
     </div>
   )

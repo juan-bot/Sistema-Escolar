@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Form } from 'react-bootstrap'
+import { Form, Modal, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsSave, BsCheckCircle, BsDownload } from 'react-icons/bs'
+import { BsSave, BsCheckCircle, BsDownload, BsSliders } from 'react-icons/bs'
 import * as XLSX from 'xlsx'
 
 const Grades = () => {
@@ -9,7 +9,12 @@ const Grades = () => {
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedRubric, setSelectedRubric] = useState('')
   const [localGrades, setLocalGrades] = useState({})
+  const [localSubSelections, setLocalSubSelections] = useState({})
   const [saved, setSaved] = useState(false)
+  const [showSubModal, setShowSubModal] = useState(false)
+  const [subModalStudent, setSubModalStudent] = useState(null)
+  const [subModalCriterion, setSubModalCriterion] = useState(null)
+  const [subModalSelections, setSubModalSelections] = useState({})
 
   const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
   const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
@@ -20,16 +25,22 @@ const Grades = () => {
   useEffect(() => {
     if (!selectedRubric || !rubricObj || classStudents.length === 0) return
     const initial = {}
+    const initialSub = {}
     classStudents.forEach(student => {
       const existingGrade = grades.find(
         g => g.studentId === student.id && g.rubricId === selectedRubric
       )
       initial[student.id] = {}
+      initialSub[student.id] = {}
       rubricObj.criteria.forEach(criterion => {
         initial[student.id][criterion.id] = existingGrade?.scores?.[criterion.id] ?? ''
+        if (criterion.subcriteria?.length) {
+          initialSub[student.id][criterion.id] = existingGrade?.subSelections?.[criterion.id] ?? {}
+        }
       })
     })
     setLocalGrades(initial)
+    setLocalSubSelections(initialSub)
   }, [selectedRubric, classStudents, grades, rubricObj])
 
   const handleScoreChange = (studentId, criterionId, value) => {
@@ -39,6 +50,51 @@ const Grades = () => {
       [studentId]: { ...prev[studentId], [criterionId]: num }
     }))
     setSaved(false)
+  }
+
+  const getScoreFromSubSelections = (criterion, selections) => {
+    if (!criterion.subcriteria?.length || !criterion.subcriteriaLabels?.length) return 0
+    const maxLabelPoints = Math.max(0, ...criterion.subcriteriaLabels.map(l => Number(l.points) || 0))
+    const totalMax = maxLabelPoints * criterion.subcriteria.length
+    if (totalMax === 0) return 0
+    const obtained = criterion.subcriteria.reduce((sum, sub) => {
+      const selectedLabelId = selections?.[sub.id]
+      if (!selectedLabelId) return sum
+      const lbl = criterion.subcriteriaLabels.find(l => l.id === selectedLabelId)
+      return sum + (Number(lbl?.points) || 0)
+    }, 0)
+    return Math.round((obtained / totalMax) * 10 * 100) / 100
+  }
+
+  const openSubModal = (student, criterion) => {
+    setSubModalStudent(student)
+    setSubModalCriterion(criterion)
+    setSubModalSelections({ ...(localSubSelections[student.id]?.[criterion.id] ?? {}) })
+    setShowSubModal(true)
+  }
+
+  const closeSubModal = () => {
+    setShowSubModal(false)
+    setSubModalStudent(null)
+    setSubModalCriterion(null)
+    setSubModalSelections({})
+  }
+
+  const saveSubModal = () => {
+    const score = getScoreFromSubSelections(subModalCriterion, subModalSelections)
+    setLocalGrades(prev => ({
+      ...prev,
+      [subModalStudent.id]: { ...prev[subModalStudent.id], [subModalCriterion.id]: score }
+    }))
+    setLocalSubSelections(prev => ({
+      ...prev,
+      [subModalStudent.id]: {
+        ...prev[subModalStudent.id],
+        [subModalCriterion.id]: subModalSelections
+      }
+    }))
+    setSaved(false)
+    closeSubModal()
   }
 
   // Calculate attendance grade for a student in the selected class (0-10 scale)
@@ -108,13 +164,17 @@ const Grades = () => {
         g => g.studentId === student.id && g.rubricId === selectedRubric
       )
       const scores = {}
+      const subSel = {}
       rubricObj.criteria.forEach(criterion => {
         scores[criterion.id] = Number(localGrades[student.id]?.[criterion.id]) || 0
+        if (criterion.subcriteria?.length) {
+          subSel[criterion.id] = localSubSelections[student.id]?.[criterion.id] ?? {}
+        }
       })
       if (existingGrade) {
-        updateGrade(existingGrade.id, { scores })
+        updateGrade(existingGrade.id, { scores, subSelections: subSel })
       } else {
-        addGrade({ studentId: student.id, rubricId: selectedRubric, scores })
+        addGrade({ studentId: student.id, rubricId: selectedRubric, scores, subSelections: subSel })
       }
     })
     setSaved(true)
@@ -292,6 +352,37 @@ const Grades = () => {
                             }}>
                               {calculateAttendanceGrade(student.id).toFixed(1)}
                             </span>
+                          ) : criterion.subcriteria?.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => openSubModal(student, criterion)}
+                              style={{
+                                background: localGrades[student.id]?.[criterion.id] !== '' && localGrades[student.id]?.[criterion.id] !== undefined
+                                  ? getGradeColor(Number(localGrades[student.id]?.[criterion.id])) + '18'
+                                  : 'var(--bg-main)',
+                                border: `1.5px solid ${localGrades[student.id]?.[criterion.id] !== '' && localGrades[student.id]?.[criterion.id] !== undefined ? getGradeColor(Number(localGrades[student.id]?.[criterion.id])) : 'var(--border)'}`,
+                                borderRadius: 8,
+                                padding: '4px 10px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 1,
+                                minWidth: 70,
+                                margin: '0 auto'
+                              }}
+                            >
+                              {localGrades[student.id]?.[criterion.id] !== '' && localGrades[student.id]?.[criterion.id] !== undefined ? (
+                                <strong style={{ fontSize: 15, color: getGradeColor(Number(localGrades[student.id]?.[criterion.id])) }}>
+                                  {Number(localGrades[student.id]?.[criterion.id]).toFixed(1)}
+                                </strong>
+                              ) : (
+                                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>—</span>
+                              )}
+                              <span style={{ fontSize: 10, color: '#E91E86', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <BsSliders size={9} /> evaluar
+                              </span>
+                            </button>
                           ) : (
                             <input
                               type="number"
@@ -322,6 +413,120 @@ const Grades = () => {
           </div>
         </div>
       )}
+
+      {/* Subcriteria Grading Modal */}
+      {subModalCriterion && (() => {
+        const labels = subModalCriterion.subcriteriaLabels ?? []
+        const subs = subModalCriterion.subcriteria ?? []
+        const maxLabelPoints = labels.length > 0 ? Math.max(0, ...labels.map(l => Number(l.points) || 0)) : 0
+        const totalMax = maxLabelPoints * subs.length
+        const obtainedPoints = subs.reduce((sum, sub) => {
+          const selId = subModalSelections[sub.id]
+          if (!selId) return sum
+          const lbl = labels.find(l => l.id === selId)
+          return sum + (Number(lbl?.points) || 0)
+        }, 0)
+        const computedScore = totalMax > 0 ? Math.round((obtainedPoints / totalMax) * 10 * 100) / 100 : 0
+        const allSelected = subs.length > 0 && subs.every(s => subModalSelections[s.id])
+        const sortedLabels = [...labels].sort((a, b) => (Number(a.points) || 0) - (Number(b.points) || 0))
+        return (
+          <Modal show={showSubModal} onHide={closeSubModal} centered size="md">
+            <Modal.Header closeButton>
+              <Modal.Title style={{ fontSize: 15 }}>
+                <BsSliders size={14} style={{ marginRight: 8, verticalAlign: 'middle', color: '#E91E86' }} />
+                {subModalCriterion.name}
+                <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>
+                  — {subModalStudent?.name}
+                </span>
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body style={{ padding: '16px 20px' }}>
+              <div style={{
+                fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16,
+                background: '#E91E8608', borderLeft: '3px solid #E91E86',
+                borderRadius: '0 6px 6px 0', padding: '8px 12px'
+              }}>
+                Selecciona el nivel para cada subcriterio.
+                Calificación = <strong>(pts obtenidos / {totalMax} pts) × {subModalCriterion.weight}%</strong>
+              </div>
+
+              {subs.map((sub, si) => {
+                const selected = subModalSelections[sub.id]
+                return (
+                  <div key={sub.id} style={{
+                    marginBottom: 14,
+                    padding: '12px 14px',
+                    background: 'var(--bg-main)',
+                    borderRadius: 8,
+                    border: `1px solid ${selected ? '#E91E8640' : 'var(--border)'}`
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        minWidth: 22, height: 22, borderRadius: '50%',
+                        background: '#E91E8620', color: '#E91E86',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, fontWeight: 700
+                      }}>{si + 1}</span>
+                      {sub.name || `Subcriterio ${si + 1}`}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {sortedLabels.map(lbl => {
+                        const isSelected = selected === lbl.id
+                        return (
+                          <button
+                            key={lbl.id}
+                            type="button"
+                            onClick={() => setSubModalSelections(prev => ({ ...prev, [sub.id]: lbl.id }))}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: 8,
+                              border: `2px solid ${isSelected ? '#E91E86' : 'var(--border)'}`,
+                              background: isSelected ? '#E91E86' : 'transparent',
+                              color: isSelected ? '#fff' : 'var(--text-primary)',
+                              fontWeight: isSelected ? 700 : 500,
+                              fontSize: 13,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {lbl.label || '—'}
+                            <span style={{ fontSize: 11, marginLeft: 4, opacity: isSelected ? 0.85 : 0.6 }}>
+                              {lbl.points} pts
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </Modal.Body>
+            <Modal.Footer style={{ justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 13 }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  {obtainedPoints} / {totalMax} pts
+                </span>
+                {allSelected && (
+                  <span style={{ marginLeft: 10, fontWeight: 700, color: getGradeColor(computedScore), fontSize: 15 }}>
+                    → {computedScore.toFixed(1)} / 10
+                  </span>
+                )}
+              </div>
+              <div className="d-flex gap-2">
+                <Button variant="secondary" onClick={closeSubModal}>Cancelar</Button>
+                <button
+                  type="button"
+                  className="btn btn-primary-custom"
+                  onClick={saveSubModal}
+                  disabled={!allSelected}
+                >
+                  Aplicar Calificación
+                </button>
+              </div>
+            </Modal.Footer>
+          </Modal>
+        )
+      })()}
     </div>
   )
 }
