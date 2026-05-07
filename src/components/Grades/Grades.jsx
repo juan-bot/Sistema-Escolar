@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Form, Modal, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsSave, BsCheckCircle, BsDownload, BsSliders } from 'react-icons/bs'
+import { BsSave, BsCheckCircle, BsDownload, BsSliders, BsGlobeAmericas, BsUpload } from 'react-icons/bs'
 import * as XLSX from 'xlsx'
 
 const Grades = () => {
@@ -15,6 +15,9 @@ const Grades = () => {
   const [subModalStudent, setSubModalStudent] = useState(null)
   const [subModalCriterion, setSubModalCriterion] = useState(null)
   const [subModalSelections, setSubModalSelections] = useState({})
+  const [natgeoImportResult, setNatgeoImportResult] = useState(null) // { matched, unmatched, pendingUpdates }
+  const [activNatgeoCriterionId, setActivNatgeoCriterionId] = useState(null)
+  const natgeoFileInputRef = useRef(null)
 
   const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
   const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
@@ -207,6 +210,121 @@ const Grades = () => {
     XLSX.writeFile(wb, fileName)
   }
 
+  // --- NatGeo Excel import ---
+  const normalizeName = (str) =>
+    str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z\s]/g, '')
+      .trim()
+
+  const matchStudentByNatGeoName = (natgeoName, studentList) => {
+    // NatGeo format: "Vasquez, Ashley" → split by comma
+    const normalized = normalizeName(natgeoName)
+    const parts = natgeoName.split(',').map(p => normalizeName(p.trim())).filter(Boolean)
+    return studentList.find(student => {
+      const sn = normalizeName(student.name)
+      if (parts.length >= 2) {
+        return parts.every(part => sn.includes(part))
+      }
+      return sn.includes(normalized)
+    })
+  }
+
+  const parseNatGeoExcel = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheet = workbook.Sheets[workbook.SheetNames[0]]
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+
+          let headerRowIdx = -1
+          let nameColIdx = -1
+          let scoreColIdx = -1
+
+          for (let r = 0; r < rows.length; r++) {
+            for (let c = 0; c < rows[r].length; c++) {
+              const cellVal = String(rows[r][c]).trim()
+              if (cellVal === 'Student Name') {
+                nameColIdx = c
+                headerRowIdx = r
+              }
+              if (cellVal === 'Average Score') {
+                scoreColIdx = c
+              }
+            }
+            if (nameColIdx !== -1 && scoreColIdx !== -1) break
+          }
+
+          if (nameColIdx === -1 || scoreColIdx === -1) {
+            reject(new Error('No se encontraron las columnas "Student Name" y "Average Score" en el archivo.'))
+            return
+          }
+
+          const results = []
+          for (let r = headerRowIdx + 1; r < rows.length; r++) {
+            const name = String(rows[r][nameColIdx] || '').trim()
+            const scoreRaw = String(rows[r][scoreColIdx] || '').trim()
+            if (!name) continue
+            let score = null
+            if (scoreRaw.endsWith('%')) {
+              const pct = parseFloat(scoreRaw)
+              if (!isNaN(pct)) score = Math.round(Math.min(Math.max(pct / 10, 0), 10) * 100) / 100
+            } else {
+              const num = parseFloat(scoreRaw)
+              if (!isNaN(num)) {
+                // if stored as decimal (e.g. 0.61) vs percentage (61)
+                const pct = num > 1 ? num : num * 100
+                score = Math.round(Math.min(Math.max(pct / 10, 0), 10) * 100) / 100
+              }
+            }
+            if (name && score !== null) {
+              results.push({ name, score })
+            }
+          }
+          resolve(results)
+        } catch (err) {
+          reject(err)
+        }
+      }
+      reader.onerror = () => reject(new Error('Error leyendo el archivo'))
+      reader.readAsArrayBuffer(file)
+    })
+  }
+
+  const handleNatGeoFileChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !activNatgeoCriterionId) return
+    e.target.value = ''
+    try {
+      const parsed = await parseNatGeoExcel(file)
+      const matched = []
+      const unmatched = []
+      const updates = {}
+      parsed.forEach(({ name, score }) => {
+        const student = matchStudentByNatGeoName(name, classStudents)
+        if (student) {
+          matched.push({ studentName: student.name, excelName: name, score })
+          updates[student.id] = score
+        } else {
+          unmatched.push(name)
+        }
+      })
+      // Don't apply yet — show preview first, apply on confirm
+      setNatgeoImportResult({ matched, unmatched, pendingUpdates: updates, criterionId: activNatgeoCriterionId })
+    } catch (err) {
+      setNatgeoImportResult({ error: err.message })
+    }
+  }
+
+  const triggerNatGeoImport = (criterionId) => {
+    setActivNatgeoCriterionId(criterionId)
+    setTimeout(() => natgeoFileInputRef.current?.click(), 0)
+  }
+  // --- end NatGeo ---
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -311,11 +429,34 @@ const Grades = () => {
                     Alumno
                   </th>
                   {rubricObj.criteria.map(c => (
-                    <th key={c.id} style={{ textAlign: 'center', minWidth: 120 }}>
+                    <th key={c.id} style={{ textAlign: 'center', minWidth: 140 }}>
                       <div>{c.name}</div>
                       <small style={{ fontWeight: 400, textTransform: 'none' }}>
-                        ({c.weight}%){c.type === 'rubric_ref' ? ' 📋' : c.type === 'attendance' ? ' 📅' : ''}
+                        ({c.weight}%){c.type === 'rubric_ref' ? ' 📋' : c.type === 'attendance' ? ' 📅' : c.type === 'natgeo' ? ' 🌍' : ''}
                       </small>
+                      {c.type === 'natgeo' && (
+                        <div style={{ marginTop: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => triggerNatGeoImport(c.id)}
+                            style={{
+                              background: '#3B82F6',
+                              border: 'none',
+                              borderRadius: 6,
+                              padding: '3px 8px',
+                              fontSize: 11,
+                              color: '#fff',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontWeight: 600
+                            }}
+                          >
+                            <BsUpload size={10} /> Importar Excel
+                          </button>
+                        </div>
+                      )}
                     </th>
                   ))}
                   <th style={{ textAlign: 'center', minWidth: 100 }}>Final</th>
@@ -352,6 +493,23 @@ const Grades = () => {
                             }}>
                               {calculateAttendanceGrade(student.id).toFixed(1)}
                             </span>
+                          ) : criterion.type === 'natgeo' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                              <input
+                                type="number"
+                                className="grade-input"
+                                min="0"
+                                max={10}
+                                value={localGrades[student.id]?.[criterion.id] ?? ''}
+                                onChange={e => handleScoreChange(student.id, criterion.id, e.target.value)}
+                                placeholder="—"
+                              />
+                              {localGrades[student.id]?.[criterion.id] !== '' && localGrades[student.id]?.[criterion.id] !== undefined && (
+                                <span style={{ fontSize: 10, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <BsGlobeAmericas size={9} /> importado
+                                </span>
+                              )}
+                            </div>
                           ) : criterion.subcriteria?.length > 0 ? (
                             <button
                               type="button"
@@ -527,6 +685,147 @@ const Grades = () => {
           </Modal>
         )
       })()}
+
+      {/* Hidden NatGeo file input */}
+      <input
+        ref={natgeoFileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        style={{ display: 'none' }}
+        onChange={handleNatGeoFileChange}
+      />
+
+      {/* NatGeo import result modal */}
+      <Modal show={!!natgeoImportResult} onHide={() => setNatgeoImportResult(null)} centered size="md">
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BsGlobeAmericas size={17} style={{ color: '#3B82F6' }} />
+            Resultado Importación NatGeo
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ padding: '20px 24px' }}>
+          {natgeoImportResult?.error ? (
+            <div style={{
+              background: '#FEE2E2',
+              border: '1px solid #FCA5A5',
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              color: '#DC2626',
+              display: 'flex',
+              gap: 8
+            }}>
+              <span>⚠️</span><span>{natgeoImportResult.error}</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* matched */}
+              <div style={{
+                background: '#10B98108',
+                border: '1px solid #10B98130',
+                borderRadius: 10,
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '8px 14px',
+                  background: '#10B98115',
+                  borderBottom: '1px solid #10B98125',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  ✅ {natgeoImportResult?.matched?.length || 0} alumno{natgeoImportResult?.matched?.length !== 1 ? 's' : ''} importado{natgeoImportResult?.matched?.length !== 1 ? 's' : ''}
+                </div>
+                {natgeoImportResult?.matched?.length > 0 && (
+                  <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                    {natgeoImportResult.matched.map((m, i) => (
+                      <div key={i} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '7px 14px',
+                        borderBottom: i < natgeoImportResult.matched.length - 1 ? '1px solid var(--border)' : 'none',
+                        fontSize: 13
+                      }}>
+                        <span style={{ fontWeight: 500 }}>{m.studentName}</span>
+                        <span style={{
+                          fontWeight: 700,
+                          fontSize: 15,
+                          color: '#3B82F6',
+                          background: '#3B82F615',
+                          padding: '2px 10px',
+                          borderRadius: 6
+                        }}>{m.score.toFixed(1)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* unmatched */}
+              {natgeoImportResult?.unmatched?.length > 0 && (
+                <div style={{
+                  background: '#FEF3C708',
+                  border: '1px solid #F59E0B40',
+                  borderRadius: 10,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    padding: '8px 14px',
+                    background: '#F59E0B15',
+                    borderBottom: '1px solid #F59E0B25',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    ⚠️ {natgeoImportResult.unmatched.length} no encontrado{natgeoImportResult.unmatched.length !== 1 ? 's' : ''} en la clase
+                  </div>
+                  {natgeoImportResult.unmatched.map((name, i) => (
+                    <div key={i} style={{
+                      padding: '6px 14px',
+                      fontSize: 12,
+                      color: 'var(--text-secondary)',
+                      borderBottom: i < natgeoImportResult.unmatched.length - 1 ? '1px solid var(--border)' : 'none'
+                    }}>{name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer style={{ borderTop: '1px solid var(--border)', padding: '12px 24px' }}>
+          <button className="btn btn-outline-custom" onClick={() => setNatgeoImportResult(null)}>
+            Cancelar
+          </button>
+          {!natgeoImportResult?.error && natgeoImportResult?.matched?.length > 0 && (
+            <button
+              className="btn btn-primary-custom"
+              style={{ background: '#3B82F6', borderColor: '#3B82F6' }}
+              onClick={() => {
+                const { pendingUpdates, criterionId } = natgeoImportResult
+                setLocalGrades(prev => {
+                  const next = { ...prev }
+                  Object.entries(pendingUpdates).forEach(([studentId, score]) => {
+                    next[studentId] = { ...next[studentId], [criterionId]: score }
+                  })
+                  return next
+                })
+                setSaved(false)
+                setNatgeoImportResult(null)
+              }}
+            >
+              <BsGlobeAmericas size={14} style={{ marginRight: 6 }} />
+              Aplicar {natgeoImportResult.matched.length} calificación{natgeoImportResult.matched.length !== 1 ? 'es' : ''}
+            </button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

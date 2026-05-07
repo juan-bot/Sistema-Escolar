@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Row, Col, Modal, Form, Button } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
-import { BsPlus, BsPencil, BsTrash, BsTrophy, BsCalendarCheck, BsSliders } from 'react-icons/bs'
+import { BsPlus, BsPencil, BsTrash, BsTrophy, BsCalendarCheck, BsSliders, BsGlobeAmericas } from 'react-icons/bs'
 import { v4 as uuidv4 } from 'uuid'
 
 const CRITERION_COLORS = ['#E91E86', '#F472B6', '#10B981', '#F59E0B', '#EC4899', '#BE185D', '#F9A8D4', '#14B8A6']
@@ -103,6 +103,15 @@ const Rubrics = () => {
   }
 
   const hasAttendanceCriterion = form.criteria.some(c => c.type === 'attendance')
+
+  const toggleNatgeo = (id) => {
+    setForm(prev => ({
+      ...prev,
+      criteria: prev.criteria.map(c =>
+        c.id === id ? { ...c, type: c.type === 'natgeo' ? 'custom' : 'natgeo' } : c
+      )
+    }))
+  }
 
   const removeCriterion = (id) => {
     if (form.criteria.length > 1) {
@@ -307,6 +316,11 @@ const Rubrics = () => {
                                   <BsCalendarCheck size={10} /> Asistencia
                                 </span>
                               )}
+                              {criterion.type === 'natgeo' && (
+                                <span style={{ fontSize: 10, background: '#3B82F615', color: '#3B82F6', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                  <BsGlobeAmericas size={10} /> NatGeo
+                                </span>
+                              )}
                             </div>
                             <p>{criterion.description}</p>
                             {criterion.subcriteria?.length > 0 && (
@@ -490,11 +504,11 @@ const Rubrics = () => {
               <div
                 key={criterion.id}
                 style={{
-                  background: criterion.type === 'rubric_ref' ? '#E91E8608' : 'var(--bg-main)',
+                  background: criterion.type === 'rubric_ref' ? '#E91E8608' : criterion.type === 'natgeo' ? '#3B82F608' : 'var(--bg-main)',
                   borderRadius: 'var(--radius-sm)',
                   padding: 16,
                   marginBottom: 12,
-                  border: criterion.type === 'rubric_ref' ? '1px solid #E91E8630' : '1px solid var(--border)'
+                  border: criterion.type === 'rubric_ref' ? '1px solid #E91E8630' : criterion.type === 'natgeo' ? '1px solid #3B82F640' : '1px solid var(--border)'
                 }}
               >
                 <div className="d-flex gap-2 mb-2">
@@ -552,32 +566,75 @@ const Rubrics = () => {
                   value={criterion.description}
                   onChange={e => updateCriterion(criterion.id, 'description', e.target.value)}
                 />
-                {criterion.type === 'custom' && (
-                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => openSubcriteriaModal(criterion)}
+                {(criterion.type === 'custom' || criterion.type === 'natgeo') && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {criterion.type === 'custom' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openSubcriteriaModal(criterion)}
+                          style={{
+                            background: criterion.subcriteria?.length > 0 ? '#E91E8615' : 'transparent',
+                            border: `1px solid ${criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--border)'}`,
+                            borderRadius: 6,
+                            padding: '4px 10px',
+                            fontSize: 12,
+                            color: criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          <BsSliders size={12} /> Subcriterios
+                          {criterion.subcriteria?.length > 0 && ` (${criterion.subcriteria.length})`}
+                        </button>
+                        {criterion.subcriteria?.length > 0 && (
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                            Total máx: <strong style={{ color: 'var(--text-primary)' }}>{getMaxPointsForCriterion(criterion)} pts</strong>
+                          </span>
+                        )}
+                      </>
+                    )}
+                    <label
                       style={{
-                        background: criterion.subcriteria?.length > 0 ? '#E91E8615' : 'transparent',
-                        border: `1px solid ${criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--border)'}`,
-                        borderRadius: 6,
-                        padding: '4px 10px',
-                        fontSize: 12,
-                        color: criterion.subcriteria?.length > 0 ? '#E91E86' : 'var(--text-secondary)',
-                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4
+                        gap: 6,
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        marginLeft: 'auto',
+                        fontSize: 12,
+                        color: criterion.type === 'natgeo' ? '#3B82F6' : 'var(--text-secondary)',
+                        fontWeight: criterion.type === 'natgeo' ? 600 : 400
                       }}
                     >
-                      <BsSliders size={12} /> Subcriterios
-                      {criterion.subcriteria?.length > 0 && ` (${criterion.subcriteria.length})`}
-                    </button>
-                    {criterion.subcriteria?.length > 0 && (
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                        Total máx: <strong style={{ color: 'var(--text-primary)' }}>{getMaxPointsForCriterion(criterion)} pts</strong>
-                      </span>
-                    )}
+                      <div
+                        onClick={() => toggleNatgeo(criterion.id)}
+                        style={{
+                          width: 34,
+                          height: 18,
+                          borderRadius: 9,
+                          background: criterion.type === 'natgeo' ? '#3B82F6' : 'var(--border)',
+                          position: 'relative',
+                          transition: 'background 0.2s',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        <div style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: 2,
+                          left: criterion.type === 'natgeo' ? 18 : 2,
+                          transition: 'left 0.2s'
+                        }} />
+                      </div>
+                      <BsGlobeAmericas size={12} /> NatGeo
+                    </label>
                   </div>
                 )}
               </div>
