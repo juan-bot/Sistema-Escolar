@@ -139,10 +139,10 @@ const Rubrics = () => {
       setSubcriteriaForm(criterion.subcriteria.map(s => ({ id: s.id, name: s.name })))
     } else {
       setSubLabels([
-        { id: uuidv4(), label: 'Malo', points: 0 },
-        { id: uuidv4(), label: 'Regular', points: 3 },
-        { id: uuidv4(), label: 'Bueno', points: 7 },
-        { id: uuidv4(), label: 'Excelente', points: 10 }
+        { id: uuidv4(), label: 'Malo', points: 0, description: '' },
+        { id: uuidv4(), label: 'Regular', points: 3, description: '' },
+        { id: uuidv4(), label: 'Bueno', points: 7, description: '' },
+        { id: uuidv4(), label: 'Excelente', points: 10, description: '' }
       ])
       setSubcriteriaForm([{ id: uuidv4(), name: '' }])
     }
@@ -180,7 +180,7 @@ const Rubrics = () => {
   }
 
   const addGlobalLabel = () => {
-    setSubLabels(prev => [...prev, { id: uuidv4(), label: '', points: 0 }])
+    setSubLabels(prev => [...prev, { id: uuidv4(), label: '', points: 0, description: '' }])
   }
 
   const removeGlobalLabel = (labelId) => {
@@ -194,6 +194,10 @@ const Rubrics = () => {
 
   const updateGlobalLabelPoints = (labelId, value) => {
     setSubLabels(prev => prev.map(l => l.id === labelId ? { ...l, points: Number(value) } : l))
+  }
+
+  const updateGlobalLabelDescription = (labelId, value) => {
+    setSubLabels(prev => prev.map(l => l.id === labelId ? { ...l, description: value } : l))
   }
 
   const subMaxLabelPoints = subLabels.length > 0 ? Math.max(0, ...subLabels.map(l => Number(l.points) || 0)) : 0
@@ -720,8 +724,9 @@ const Rubrics = () => {
             </div>
             {/* Column headers */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 6, paddingRight: 28 }}>
-              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Etiqueta</div>
-              <div style={{ width: 90, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>Puntos</div>
+              <div style={{ width: 130, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Etiqueta</div>
+              <div style={{ width: 70, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>Puntos</div>
+              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Descripción</div>
             </div>
             {subLabels.map((lbl, li) => (
               <div key={lbl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -732,7 +737,7 @@ const Rubrics = () => {
                   placeholder="Nombre del nivel"
                   value={lbl.label}
                   onChange={e => updateGlobalLabelName(lbl.id, e.target.value)}
-                  style={{ flex: 1, fontWeight: 600 }}
+                  style={{ width: 130, fontWeight: 600, flexShrink: 0 }}
                 />
                 <Form.Control
                   size="sm"
@@ -741,7 +746,17 @@ const Rubrics = () => {
                   placeholder="0"
                   value={lbl.points}
                   onChange={e => updateGlobalLabelPoints(lbl.id, e.target.value)}
-                  style={{ width: 90, textAlign: 'center' }}
+                  style={{ width: 70, textAlign: 'center', flexShrink: 0 }}
+                />
+                <Form.Control
+                  as="textarea"
+                  size="sm"
+                  placeholder="Descripción del nivel..."
+                  value={lbl.description ?? ''}
+                  onChange={e => updateGlobalLabelDescription(lbl.id, e.target.value)}
+                  maxLength={500}
+                  rows={2}
+                  style={{ flex: 1, resize: 'vertical', minHeight: 36 }}
                 />
                 {subLabels.length > 1 && (
                   <button

@@ -586,7 +586,7 @@ const Grades = () => {
         }, 0)
         const computedScore = totalMax > 0 ? Math.round((obtainedPoints / totalMax) * 10 * 100) / 100 : 0
         const allSelected = subs.length > 0 && subs.every(s => subModalSelections[s.id])
-        const sortedLabels = [...labels].sort((a, b) => (Number(a.points) || 0) - (Number(b.points) || 0))
+        const sortedLabels = [...labels].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0))
         return (
           <Modal show={showSubModal} onHide={closeSubModal} centered size="md">
             <Modal.Header closeButton>
@@ -644,13 +644,22 @@ const Grades = () => {
                               fontWeight: isSelected ? 700 : 500,
                               fontSize: 13,
                               cursor: 'pointer',
-                              transition: 'all 0.15s'
+                              transition: 'all 0.15s',
+                              textAlign: 'left',
+                              maxWidth: 200
                             }}
                           >
-                            {lbl.label || '—'}
-                            <span style={{ fontSize: 11, marginLeft: 4, opacity: isSelected ? 0.85 : 0.6 }}>
-                              {lbl.points} pts
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              {lbl.label || '—'}
+                              <span style={{ fontSize: 11, opacity: isSelected ? 0.85 : 0.6 }}>
+                                {lbl.points} pts
+                              </span>
+                            </div>
+                            {lbl.description && (
+                              <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2, opacity: isSelected ? 0.9 : 0.65, lineHeight: 1.3 }}>
+                                {lbl.description}
+                              </div>
+                            )}
                           </button>
                         )
                       })}
