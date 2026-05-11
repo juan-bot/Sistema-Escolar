@@ -18,6 +18,15 @@ const Grades = () => {
   const [natgeoImportResult, setNatgeoImportResult] = useState(null) // { matched, unmatched, pendingUpdates }
   const [activNatgeoCriterionId, setActivNatgeoCriterionId] = useState(null)
   const natgeoFileInputRef = useRef(null)
+  const autoSaveTimers = useRef({})
+  const localGradesRef = useRef({})
+  const localSubSelectionsRef = useRef({})
+  const gradesRef = useRef([])
+
+  // Keep refs in sync with latest state/context to avoid stale closures in debounced saves
+  useEffect(() => { localGradesRef.current = localGrades }, [localGrades])
+  useEffect(() => { localSubSelectionsRef.current = localSubSelections }, [localSubSelections])
+  useEffect(() => { gradesRef.current = grades }, [grades])
 
   const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
   const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
@@ -46,13 +55,38 @@ const Grades = () => {
     setLocalSubSelections(initialSub)
   }, [selectedRubric, classStudents, grades, rubricObj])
 
+  const saveStudentGrade = (studentId) => {
+    if (!rubricObj) return
+    const currentGrades = localGradesRef.current
+    const currentSubSelections = localSubSelectionsRef.current
+    const existingGrade = gradesRef.current.find(
+      g => g.studentId === studentId && g.rubricId === selectedRubric
+    )
+    const scores = {}
+    const subSel = {}
+    rubricObj.criteria.forEach(criterion => {
+      scores[criterion.id] = Number(currentGrades[studentId]?.[criterion.id]) || 0
+      if (criterion.subcriteria?.length) {
+        subSel[criterion.id] = currentSubSelections[studentId]?.[criterion.id] ?? {}
+      }
+    })
+    if (existingGrade) {
+      updateGrade(existingGrade.id, { scores, subSelections: subSel })
+    } else {
+      addGrade({ studentId, rubricId: selectedRubric, scores, subSelections: subSel })
+    }
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
   const handleScoreChange = (studentId, criterionId, value) => {
     const num = value === '' ? '' : Math.min(Math.max(0, Number(value)), 10)
-    setLocalGrades(prev => ({
-      ...prev,
-      [studentId]: { ...prev[studentId], [criterionId]: num }
-    }))
+    setLocalGrades(prev => ({ ...prev, [studentId]: { ...prev[studentId], [criterionId]: num } }))
     setSaved(false)
+    clearTimeout(autoSaveTimers.current[studentId])
+    autoSaveTimers.current[studentId] = setTimeout(() => {
+      saveStudentGrade(studentId)
+    }, 800)
   }
 
   const getScoreFromSubSelections = (criterion, selections) => {
@@ -85,18 +119,22 @@ const Grades = () => {
 
   const saveSubModal = () => {
     const score = getScoreFromSubSelections(subModalCriterion, subModalSelections)
-    setLocalGrades(prev => ({
-      ...prev,
-      [subModalStudent.id]: { ...prev[subModalStudent.id], [subModalCriterion.id]: score }
-    }))
-    setLocalSubSelections(prev => ({
-      ...prev,
-      [subModalStudent.id]: {
-        ...prev[subModalStudent.id],
-        [subModalCriterion.id]: subModalSelections
-      }
-    }))
-    setSaved(false)
+    const studentId = subModalStudent.id
+    const criterionId = subModalCriterion.id
+    const updatedGrades = {
+      ...localGrades,
+      [studentId]: { ...localGrades[studentId], [criterionId]: score }
+    }
+    const updatedSubSelections = {
+      ...localSubSelections,
+      [studentId]: { ...localSubSelections[studentId], [criterionId]: subModalSelections }
+    }
+    setLocalGrades(updatedGrades)
+    setLocalSubSelections(updatedSubSelections)
+    // Update refs immediately so saveStudentGrade reads the latest values
+    localGradesRef.current = updatedGrades
+    localSubSelectionsRef.current = updatedSubSelections
+    saveStudentGrade(studentId)
     closeSubModal()
   }
 
