@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Row, Col } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
 import { useNavigate } from 'react-router-dom'
@@ -21,8 +21,22 @@ import {
   BsClipboardCheck,
   BsArrowRight,
   BsClock,
-  BsPlus
+  BsPlus,
+  BsStars
 } from 'react-icons/bs'
+
+const frases = [
+  { texto: 'Enseñar es dejar una huella en la vida de alguien para siempre.', autor: 'Henry Adams' },
+  { texto: 'La mejor maestra del mundo no es la que sabe más, sino la que hace sentir que aprender vale la pena.', autor: '✨' },
+  { texto: 'Tu dedicación cambia vidas, aunque no siempre lo veas. Tus alumnos tienen mucha suerte de tenerte.', autor: '💕' },
+  { texto: 'Una buena maestra inspira esperanza, enciende la imaginación y aviva el amor por el aprendizaje.', autor: 'Brad Henry' },
+  { texto: 'Lo que haces importa más de lo que crees. Cada clase, cada alumno, cada esfuerzo cuenta.', autor: '🌸' },
+  { texto: 'Eres la razón por la que alguien encontrará su camino. Eso es un regalo increíble.', autor: '💖' },
+  { texto: 'El impacto de un gran maestro nunca puede ser borrado.', autor: 'Unknown' },
+  { texto: 'Estás haciendo un trabajo hermoso. Sé orgullosa de cada paso que das.', autor: '🌷' },
+  { texto: 'No cuentas el tiempo que das, das el tiempo que cuenta.', autor: '✨' },
+  { texto: 'Eres extraordinaria en lo que haces. Tus alumnos lo saben, yo lo sé. 💕', autor: 'Tu mayor fan' },
+]
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
@@ -30,6 +44,7 @@ const Dashboard = () => {
   const { universities, classes, students, rubrics } = useApp()
   const navigate = useNavigate()
   const [seeding, setSeeding] = useState(false)
+  const [fraseIdx] = useState(() => Math.floor(Math.random() * frases.length))
 
   const handleSeed = async () => {
     setSeeding(true)
@@ -111,6 +126,31 @@ const Dashboard = () => {
         <div>
           <h2>Dashboard</h2>
           <p>Hola mi bb hermosa 💕, aquí tienes un resumen de tus clases.</p>
+        </div>
+      </div>
+
+      {/* Frase motivacional */}
+      <div
+        className="motivational-card mb-4"
+        style={{
+          background: 'linear-gradient(135deg, #BE185D 0%, #E91E86 60%, #F472B6 100%)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '24px 28px',
+          color: '#fff',
+          boxShadow: '0 8px 24px rgba(233, 30, 134, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+        }}
+      >
+        <BsStars size={36} style={{ flexShrink: 0, opacity: 0.9 }} />
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, lineHeight: 1.5 }}>
+            "{frases[fraseIdx].texto}"
+          </p>
+          <span style={{ fontSize: '13px', opacity: 0.85, marginTop: '6px', display: 'block' }}>
+            — {frases[fraseIdx].autor}
+          </span>
         </div>
       </div>
 
