@@ -140,15 +140,15 @@ const Rubrics = () => {
     setEditingCriterionForSub(criterion)
     if (criterion.subcriteriaLabels?.length > 0) {
       setSubLabels(criterion.subcriteriaLabels.map(l => ({ ...l })))
-      setSubcriteriaForm(criterion.subcriteria.map(s => ({ id: s.id, name: s.name })))
+      setSubcriteriaForm(criterion.subcriteria.map(s => ({ id: s.id, name: s.name, descriptions: s.descriptions || {} })))
     } else {
       setSubLabels([
-        { id: uuidv4(), label: 'Malo', points: 0, description: '' },
-        { id: uuidv4(), label: 'Regular', points: 3, description: '' },
-        { id: uuidv4(), label: 'Bueno', points: 7, description: '' },
-        { id: uuidv4(), label: 'Excelente', points: 10, description: '' }
+        { id: uuidv4(), label: 'Malo', points: 0 },
+        { id: uuidv4(), label: 'Regular', points: 3 },
+        { id: uuidv4(), label: 'Bueno', points: 7 },
+        { id: uuidv4(), label: 'Excelente', points: 10 }
       ])
-      setSubcriteriaForm([{ id: uuidv4(), name: '' }])
+      setSubcriteriaForm([{ id: uuidv4(), name: '', descriptions: {} }])
     }
     setShowSubcriteriaModal(true)
   }
@@ -172,7 +172,7 @@ const Rubrics = () => {
   }
 
   const addSubcriterium = () => {
-    setSubcriteriaForm(prev => [...prev, { id: uuidv4(), name: '' }])
+    setSubcriteriaForm(prev => [...prev, { id: uuidv4(), name: '', descriptions: {} }])
   }
 
   const removeSubcriterium = (subId) => {
@@ -181,6 +181,12 @@ const Rubrics = () => {
 
   const updateSubcriteriumName = (subId, value) => {
     setSubcriteriaForm(prev => prev.map(s => s.id === subId ? { ...s, name: value } : s))
+  }
+
+  const updateSubcriteriumDescription = (subId, labelId, value) => {
+    setSubcriteriaForm(prev => prev.map(s =>
+      s.id === subId ? { ...s, descriptions: { ...s.descriptions, [labelId]: value } } : s
+    ))
   }
 
   const addGlobalLabel = () => {
@@ -771,7 +777,6 @@ const Rubrics = () => {
             <div style={{ display: 'flex', gap: 8, marginBottom: 6, paddingRight: 28 }}>
               <div style={{ width: 130, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Etiqueta</div>
               <div style={{ width: 70, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>Puntos</div>
-              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Descripción</div>
             </div>
             {subLabels.map((lbl, li) => (
               <div key={lbl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -792,16 +797,6 @@ const Rubrics = () => {
                   value={lbl.points}
                   onChange={e => updateGlobalLabelPoints(lbl.id, e.target.value)}
                   style={{ width: 70, textAlign: 'center', flexShrink: 0 }}
-                />
-                <Form.Control
-                  as="textarea"
-                  size="sm"
-                  placeholder="Descripción del nivel..."
-                  value={lbl.description ?? ''}
-                  onChange={e => updateGlobalLabelDescription(lbl.id, e.target.value)}
-                  maxLength={500}
-                  rows={2}
-                  style={{ flex: 1, resize: 'vertical', minHeight: 36 }}
                 />
                 {subLabels.length > 1 && (
                   <button
@@ -835,37 +830,75 @@ const Rubrics = () => {
           {/* Sección 2: Subcriterios */}
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: '#E91E86' }}>②</span> Subcriterios
+            <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-secondary)' }}>
+              — descripción por nivel configurable por subcriterio
+            </span>
           </div>
 
-          {subcriteriaForm.map((sub, si) => (
-            <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <div style={{
-                minWidth: 24, height: 24, borderRadius: '50%',
-                background: '#E91E8620', color: '#E91E86',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, flexShrink: 0
-              }}>
-                {si + 1}
-              </div>
-              <Form.Control
-                size="sm"
-                type="text"
-                placeholder="Nombre del subcriterio (ej: Escritura)"
-                value={sub.name}
-                onChange={e => updateSubcriteriumName(sub.id, e.target.value)}
-                style={{ fontWeight: 600, flex: 1 }}
-              />
-              {subcriteriaForm.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeSubcriterium(sub.id)}
-                  style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px 4px', flexShrink: 0 }}
-                >
-                  <BsTrash size={13} />
-                </button>
-              )}
-            </div>
-          ))}
+          <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px', tableLayout: 'auto' }}>
+              <thead>
+                <tr>
+                  <th style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', padding: '0 8px 4px 0', whiteSpace: 'nowrap', minWidth: 160 }}>Subcriterio</th>
+                  {subLabels.map(lbl => (
+                    <th key={lbl.id} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', padding: '0 6px 4px', textAlign: 'center', minWidth: 130 }}>
+                      <div style={{ fontWeight: 700 }}>{lbl.label || '—'}</div>
+                      <div style={{ fontWeight: 400, fontSize: 10, color: 'var(--text-secondary)' }}>{lbl.points} pts</div>
+                    </th>
+                  ))}
+                  <th style={{ width: 28 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {subcriteriaForm.map((sub, si) => (
+                  <tr key={sub.id}>
+                    <td style={{ verticalAlign: 'top', paddingRight: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{
+                          minWidth: 22, height: 22, borderRadius: '50%',
+                          background: '#E91E8620', color: '#E91E86',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 11, fontWeight: 700, flexShrink: 0
+                        }}>{si + 1}</div>
+                        <Form.Control
+                          size="sm"
+                          type="text"
+                          placeholder={`Subcriterio ${si + 1}`}
+                          value={sub.name}
+                          onChange={e => updateSubcriteriumName(sub.id, e.target.value)}
+                          style={{ fontWeight: 600, fontSize: 12 }}
+                        />
+                      </div>
+                    </td>
+                    {subLabels.map(lbl => (
+                      <td key={lbl.id} style={{ verticalAlign: 'top', padding: '0 6px' }}>
+                        <Form.Control
+                          as="textarea"
+                          size="sm"
+                          rows={2}
+                          placeholder="Descripción..."
+                          value={sub.descriptions?.[lbl.id] ?? ''}
+                          onChange={e => updateSubcriteriumDescription(sub.id, lbl.id, e.target.value)}
+                          style={{ fontSize: 11, resize: 'vertical', minHeight: 52 }}
+                        />
+                      </td>
+                    ))}
+                    <td style={{ verticalAlign: 'top', paddingTop: 2 }}>
+                      {subcriteriaForm.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSubcriterium(sub.id)}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px 4px' }}
+                        >
+                          <BsTrash size={13} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <button
             type="button"

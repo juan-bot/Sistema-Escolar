@@ -710,9 +710,9 @@ const Grades = () => {
                                 {lbl.points} pts
                               </span>
                             </div>
-                            {lbl.description && (
+                            {(sub.descriptions?.[lbl.id] || lbl.description) && (
                               <div style={{ fontSize: 11, fontWeight: 400, marginTop: 2, opacity: isSelected ? 0.9 : 0.65, lineHeight: 1.3 }}>
-                                {lbl.description}
+                                {sub.descriptions?.[lbl.id] || lbl.description}
                               </div>
                             )}
                           </button>
