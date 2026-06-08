@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 
 const Grades = () => {
   const { universities, classes, students, rubrics, grades, attendance, addGrade, updateGrade } = useApp()
+  const [selectedUniversity, setSelectedUniversity] = useState('')
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedRubric, setSelectedRubric] = useState('')
   const [localGrades, setLocalGrades] = useState({})
@@ -28,6 +29,7 @@ const Grades = () => {
   useEffect(() => { localSubSelectionsRef.current = localSubSelections }, [localSubSelections])
   useEffect(() => { gradesRef.current = grades }, [grades])
 
+  const filteredClasses = useMemo(() => selectedUniversity ? classes.filter(c => c.universityId === selectedUniversity) : [], [classes, selectedUniversity])
   const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
   const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
   const classStudents = useMemo(() => students.filter(s => s.classId === selectedClass), [students, selectedClass])
@@ -387,20 +389,29 @@ const Grades = () => {
 
       <div className="filter-bar">
         <Form.Select
-          value={selectedClass}
-          onChange={e => { setSelectedClass(e.target.value); setSelectedRubric('') }}
+          value={selectedUniversity}
+          onChange={e => { setSelectedUniversity(e.target.value); setSelectedClass(''); setSelectedRubric('') }}
           style={{ maxWidth: 300 }}
         >
-          <option value="">Seleccionar clase...</option>
-          {classes.map(cls => {
-            const u = universities.find(u => u.id === cls.universityId)
-            return (
-              <option key={cls.id} value={cls.id}>
-                {u?.icon} {cls.name} ({cls.code})
-              </option>
-            )
-          })}
+          <option value="">Seleccionar universidad...</option>
+          {universities.map(u => (
+            <option key={u.id} value={u.id}>{u.icon} {u.name}</option>
+          ))}
         </Form.Select>
+        {selectedUniversity && (
+          <Form.Select
+            value={selectedClass}
+            onChange={e => { setSelectedClass(e.target.value); setSelectedRubric('') }}
+            style={{ maxWidth: 300 }}
+          >
+            <option value="">Seleccionar clase...</option>
+            {filteredClasses.map(cls => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name} ({cls.code})
+              </option>
+            ))}
+          </Form.Select>
+        )}
         {selectedClass && (
           <Form.Select
             value={selectedRubric}
@@ -415,9 +426,15 @@ const Grades = () => {
         )}
       </div>
 
-      {!selectedClass ? (
+      {!selectedUniversity ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
+          <h5>Selecciona una universidad</h5>
+          <p>Elige una universidad para ver sus clases y comenzar a calificar</p>
+        </div>
+      ) : !selectedClass ? (
+        <div className="empty-state">
+          <div className="empty-icon">🏫</div>
           <h5>Selecciona una clase</h5>
           <p>Elige una clase y una rúbrica para comenzar a calificar</p>
         </div>
