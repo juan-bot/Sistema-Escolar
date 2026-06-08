@@ -61,7 +61,22 @@ export const AppProvider = ({ children }) => {
       await batchDeleteDocs('grades', gradeIds)
     }
     await batchDeleteDocs('students', students.filter(s => classIds.includes(s.classId)).map(s => s.id))
-    await batchDeleteDocs('rubrics', rubrics.filter(r => classIds.includes(r.classId)).map(r => r.id))
+
+    // Rubrics: delete if all their classes belong to this university; otherwise remove those classIds
+    const rubricsToDelete = rubrics.filter(r => {
+      const ids = r.classIds || (r.classId ? [r.classId] : [])
+      return ids.every(cid => classIds.includes(cid))
+    })
+    const rubricsToUpdate = rubrics.filter(r => {
+      const ids = r.classIds || (r.classId ? [r.classId] : [])
+      return ids.some(cid => classIds.includes(cid)) && !ids.every(cid => classIds.includes(cid))
+    })
+    await batchDeleteDocs('rubrics', rubricsToDelete.map(r => r.id))
+    await Promise.all(rubricsToUpdate.map(r => {
+      const remaining = (r.classIds || [r.classId]).filter(cid => !classIds.includes(cid))
+      return updateDocument('rubrics', r.id, { classIds: remaining, classId: null })
+    }))
+
     await batchDeleteDocs('classes', classIds)
     await deleteDocument('universities', id)
   }
@@ -81,7 +96,20 @@ export const AppProvider = ({ children }) => {
 
     await batchDeleteDocs('grades', gradeIds)
     await batchDeleteDocs('students', studentIds)
-    await batchDeleteDocs('rubrics', rubrics.filter(r => r.classId === id).map(r => r.id))
+
+    // For rubrics: if only assigned to this class → delete; if multi-class → remove this classId
+    const rubricsSolelyThisClass = rubrics.filter(r => {
+      const ids = r.classIds || (r.classId ? [r.classId] : [])
+      return ids.length === 1 && ids[0] === id
+    })
+    const rubricsMultiClass = rubrics.filter(r => {
+      const ids = r.classIds || (r.classId ? [r.classId] : [])
+      return ids.length > 1 && ids.includes(id)
+    })
+    await batchDeleteDocs('rubrics', rubricsSolelyThisClass.map(r => r.id))
+    await Promise.all(rubricsMultiClass.map(r =>
+      updateDocument('rubrics', r.id, { classIds: (r.classIds || [r.classId]).filter(cid => cid !== id), classId: null })
+    ))
     await deleteDocument('classes', id)
   }
 
@@ -137,10 +165,12 @@ export const AppProvider = ({ children }) => {
     await deleteDocument('attendance', id)
   }
 
+  const getRubricClassIds = (r) => r.classIds || (r.classId ? [r.classId] : [])
+
   // Helpers
   const getClassesByUniversity = (universityId) => classes.filter(c => c.universityId === universityId)
   const getStudentsByClass = (classId) => students.filter(s => s.classId === classId)
-  const getRubricsByClass = (classId) => rubrics.filter(r => r.classId === classId)
+  const getRubricsByClass = (classId) => rubrics.filter(r => getRubricClassIds(r).includes(classId))
   const getUniversityById = (id) => universities.find(u => u.id === id)
   const getClassById = (id) => classes.find(c => c.id === id)
 

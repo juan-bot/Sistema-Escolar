@@ -13,7 +13,7 @@ const Rubrics = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [filterClass, setFilterClass] = useState('all')
   const [form, setForm] = useState({
-    classId: '',
+    classIds: [],
     name: '',
     isFinal: false,
     criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }]
@@ -23,12 +23,16 @@ const Rubrics = () => {
   const [subLabels, setSubLabels] = useState([])
   const [subcriteriaForm, setSubcriteriaForm] = useState([])
 
+  const getRubricClassIds = (r) => r.classIds || (r.classId ? [r.classId] : [])
+
   const filteredRubrics = filterClass === 'all'
     ? rubrics
-    : rubrics.filter(r => r.classId === filterClass)
+    : rubrics.filter(r => getRubricClassIds(r).includes(filterClass))
 
-  // Get non-final rubrics for the selected class (to reference in final rubric)
-  const availableParciales = rubrics.filter(r => r.classId === form.classId && !r.isFinal && r.id !== editingRubric?.id)
+  // Get non-final rubrics that share at least one class with current form (to reference in final rubric)
+  const availableParciales = rubrics.filter(r =>
+    getRubricClassIds(r).some(id => form.classIds.includes(id)) && !r.isFinal && r.id !== editingRubric?.id
+  )
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -43,7 +47,7 @@ const Rubrics = () => {
   const handleEdit = (rubric) => {
     setEditingRubric(rubric)
     setForm({
-      classId: rubric.classId,
+      classIds: rubric.classIds || (rubric.classId ? [rubric.classId] : []),
       name: rubric.name,
       isFinal: rubric.isFinal || false,
       criteria: rubric.criteria.map(c => ({ ...c }))
@@ -55,7 +59,7 @@ const Rubrics = () => {
     setShowModal(false)
     setEditingRubric(null)
     setForm({
-      classId: '',
+      classIds: [],
       name: '',
       isFinal: false,
       criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }]
@@ -209,6 +213,15 @@ const Rubrics = () => {
   const referencedRubricIds = form.criteria.filter(c => c.type === 'rubric_ref').map(c => c.rubricRefId)
   const unreferencedParciales = availableParciales.filter(r => !referencedRubricIds.includes(r.id))
 
+  const toggleClassId = (classId) => {
+    setForm(prev => ({
+      ...prev,
+      classIds: prev.classIds.includes(classId)
+        ? prev.classIds.filter(id => id !== classId)
+        : [...prev.classIds, classId]
+    }))
+  }
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -251,8 +264,8 @@ const Rubrics = () => {
       ) : (
         <Row className="g-3">
           {filteredRubrics.map((rubric, i) => {
-            const cls = classes.find(c => c.id === rubric.classId)
-            const uni = cls ? universities.find(u => u.id === cls.universityId) : null
+            const rubricClassIds = rubric.classIds || (rubric.classId ? [rubric.classId] : [])
+            const rubricClasses = rubricClassIds.map(id => classes.find(c => c.id === id)).filter(Boolean)
             const total = rubric.criteria.reduce((s, c) => s + (c.weight || 0), 0)
             return (
               <Col key={rubric.id} lg={6}>
@@ -270,18 +283,21 @@ const Rubrics = () => {
                         )}
                       </div>
                       <div className="d-flex gap-2 flex-wrap">
-                        {uni && (
-                          <span
-                            className="badge-custom"
-                            style={{
-                              background: (uni.color || '#E91E86') + '15',
-                              color: uni.color || '#E91E86'
-                            }}
-                          >
-                            {uni.icon} {uni.abbreviation}
-                          </span>
-                        )}
-                        <span className="badge-custom bg-primary-soft">{cls?.name}</span>
+                        {rubricClasses.map(cls => {
+                          const uni = universities.find(u => u.id === cls.universityId)
+                          return (
+                            <span
+                              key={cls.id}
+                              className="badge-custom"
+                              style={{
+                                background: (uni?.color || '#E91E86') + '15',
+                                color: uni?.color || '#E91E86'
+                              }}
+                            >
+                              {uni?.icon} {cls.name}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
                     <div className="d-flex gap-1">
@@ -374,27 +390,54 @@ const Rubrics = () => {
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
             <Row className="mb-3">
-              <Col md={5}>
+              <Col md={12}>
                 <Form.Group>
-                  <Form.Label>Clase</Form.Label>
-                  <Form.Select
-                    value={form.classId}
-                    onChange={e => setForm({ ...form, classId: e.target.value, criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }] })}
-                    required
-                  >
-                    <option value="">Seleccionar clase...</option>
-                    {classes.map(cls => {
-                      const uni = universities.find(u => u.id === cls.universityId)
-                      return (
-                        <option key={cls.id} value={cls.id}>
-                          {uni?.icon} {cls.name} - {uni?.abbreviation}
-                        </option>
-                      )
-                    })}
-                  </Form.Select>
+                  <Form.Label style={{ fontWeight: 600 }}>Clases asignadas</Form.Label>
+                  {form.classIds.length === 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 6 }}>Selecciona al menos una clase</div>
+                  )}
+                  {universities.map(uni => {
+                    const uniClasses = classes.filter(c => c.universityId === uni.id)
+                    if (!uniClasses.length) return null
+                    return (
+                      <div key={uni.id} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: uni.color || '#E91E86', marginBottom: 6 }}>
+                          {uni.icon} {uni.name} — {uni.abbreviation}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {uniClasses.map(cls => {
+                            const checked = form.classIds.includes(cls.id)
+                            return (
+                              <label
+                                key={cls.id}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                                  padding: '5px 12px', borderRadius: 8,
+                                  border: `1.5px solid ${checked ? (uni.color || '#E91E86') : 'var(--border)'}`,
+                                  background: checked ? (uni.color || '#E91E86') + '15' : 'transparent',
+                                  fontSize: 13, userSelect: 'none', transition: 'all 0.15s'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleClassId(cls.id)}
+                                  style={{ accentColor: uni.color || '#E91E86' }}
+                                />
+                                <span style={{ fontWeight: checked ? 600 : 400 }}>{cls.name}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>({cls.code})</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </Form.Group>
               </Col>
-              <Col md={5}>
+            </Row>
+            <Row className="mb-3">
+              <Col md={7}>
                 <Form.Group>
                   <Form.Label>Nombre de la Rúbrica</Form.Label>
                   <Form.Control
@@ -455,7 +498,7 @@ const Rubrics = () => {
               </div>
             </div>
 
-            {form.isFinal && form.classId && unreferencedParciales.length > 0 && (
+            {form.isFinal && form.classIds.length > 0 && unreferencedParciales.length > 0 && (
               <div style={{
                 background: '#F59E0B10',
                 border: '1px dashed #F59E0B',
@@ -482,7 +525,7 @@ const Rubrics = () => {
               </div>
             )}
 
-            {form.classId && !hasAttendanceCriterion && (
+            {form.classIds.length > 0 && !hasAttendanceCriterion && (
               <div style={{
                 background: '#10B98110',
                 border: '1px dashed #10B981',
@@ -649,11 +692,13 @@ const Rubrics = () => {
             <button
               type="submit"
               className="btn btn-primary-custom"
-              disabled={totalWeight !== 100}
+              disabled={totalWeight !== 100 || form.classIds.length === 0}
             >
-              {totalWeight !== 100
-                ? `Peso total: ${totalWeight}% (debe ser 100%)`
-                : (editingRubric ? 'Guardar Cambios' : 'Crear Rúbrica')
+              {form.classIds.length === 0
+                ? 'Selecciona al menos una clase'
+                : totalWeight !== 100
+                  ? `Peso total: ${totalWeight}% (debe ser 100%)`
+                  : (editingRubric ? 'Guardar Cambios' : 'Crear Rúbrica')
               }
             </button>
           </Modal.Footer>

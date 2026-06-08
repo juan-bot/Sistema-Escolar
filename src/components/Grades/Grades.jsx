@@ -31,7 +31,7 @@ const Grades = () => {
   const classObj = useMemo(() => classes.find(c => c.id === selectedClass), [classes, selectedClass])
   const rubricObj = useMemo(() => rubrics.find(r => r.id === selectedRubric), [rubrics, selectedRubric])
   const classStudents = useMemo(() => students.filter(s => s.classId === selectedClass), [students, selectedClass])
-  const classRubrics = useMemo(() => rubrics.filter(r => r.classId === selectedClass), [rubrics, selectedClass])
+  const classRubrics = useMemo(() => rubrics.filter(r => (r.classIds || (r.classId ? [r.classId] : [])).includes(selectedClass)), [rubrics, selectedClass])
   const uni = useMemo(() => classObj ? universities.find(u => u.id === classObj.universityId) : null, [universities, classObj])
 
   useEffect(() => {
