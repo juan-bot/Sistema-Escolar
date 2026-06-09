@@ -17,6 +17,7 @@ const Students = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingStudent, setEditingStudent] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [filterUni, setFilterUni] = useState('all')
   const [filterClass, setFilterClass] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -70,6 +71,7 @@ const Students = () => {
   }
 
   const handleCloseModal = () => {
+    setShowCloseConfirm(false)
     setShowModal(false)
     setEditingStudent(null)
     setForm({
@@ -77,6 +79,8 @@ const Students = () => {
       name: '', email: '', matricula: ''
     })
   }
+
+  const handleTryClose = () => setShowCloseConfirm(true)
 
   const handleOpenAdd = () => {
     setForm({
@@ -348,7 +352,7 @@ const Students = () => {
       )}
 
       {/* Add/Edit Modal */}
-      <Modal show={showModal} onHide={handleCloseModal} centered>
+      <Modal show={showModal} onHide={handleTryClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>
             {editingStudent ? 'Editar Alumno' : 'Agregar Alumno'}
@@ -410,7 +414,7 @@ const Students = () => {
             </Row>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
+            <Button variant="secondary" onClick={handleTryClose}>Cancelar</Button>
             <button type="submit" className="btn btn-primary-custom">
               {editingStudent ? 'Guardar Cambios' : 'Agregar'}
             </button>
@@ -561,6 +565,19 @@ const Students = () => {
             }
           </button>
         </Modal.Footer>
+      </Modal>
+
+      {/* Close Confirmation */}
+      <Modal show={showCloseConfirm} onHide={() => setShowCloseConfirm(false)} centered size="sm">
+        <Modal.Body className="text-center py-4">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h5>¿Descartar cambios?</h5>
+          <p className="text-muted" style={{ fontSize: 14 }}>Los cambios no guardados se perderán.</p>
+          <div className="d-flex gap-2 justify-content-center mt-3">
+            <Button variant="secondary" onClick={() => setShowCloseConfirm(false)}>Seguir editando</Button>
+            <Button variant="danger" onClick={handleCloseModal}>Descartar</Button>
+          </div>
+        </Modal.Body>
       </Modal>
 
       {/* Delete Confirmation */}

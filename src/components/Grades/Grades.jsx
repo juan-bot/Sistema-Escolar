@@ -16,6 +16,7 @@ const Grades = () => {
   const [subModalStudent, setSubModalStudent] = useState(null)
   const [subModalCriterion, setSubModalCriterion] = useState(null)
   const [subModalSelections, setSubModalSelections] = useState({})
+  const [showSubCloseConfirm, setShowSubCloseConfirm] = useState(false)
   const [natgeoImportResult, setNatgeoImportResult] = useState(null) // { matched, unmatched, pendingUpdates }
   const [activNatgeoCriterionId, setActivNatgeoCriterionId] = useState(null)
   const natgeoFileInputRef = useRef(null)
@@ -113,11 +114,14 @@ const Grades = () => {
   }
 
   const closeSubModal = () => {
+    setShowSubCloseConfirm(false)
     setShowSubModal(false)
     setSubModalStudent(null)
     setSubModalCriterion(null)
     setSubModalSelections({})
   }
+
+  const handleTryCloseSubModal = () => setShowSubCloseConfirm(true)
 
   const saveSubModal = () => {
     const score = getScoreFromSubSelections(subModalCriterion, subModalSelections)
@@ -643,7 +647,7 @@ const Grades = () => {
         const allSelected = subs.length > 0 && subs.every(s => subModalSelections[s.id])
         const sortedLabels = [...labels].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0))
         return (
-          <Modal show={showSubModal} onHide={closeSubModal} centered size="md">
+          <Modal show={showSubModal} onHide={handleTryCloseSubModal} centered size="md">
             <Modal.Header closeButton>
               <Modal.Title style={{ fontSize: 15 }}>
                 <BsSliders size={14} style={{ marginRight: 8, verticalAlign: 'middle', color: '#E91E86' }} />
@@ -735,7 +739,7 @@ const Grades = () => {
                 )}
               </div>
               <div className="d-flex gap-2">
-                <Button variant="secondary" onClick={closeSubModal}>Cancelar</Button>
+                <Button variant="secondary" onClick={handleTryCloseSubModal}>Cancelar</Button>
                 <button
                   type="button"
                   className="btn btn-primary-custom"
@@ -749,6 +753,19 @@ const Grades = () => {
           </Modal>
         )
       })()}
+
+      {/* Subcriteria Close Confirmation */}
+      <Modal show={showSubCloseConfirm} onHide={() => setShowSubCloseConfirm(false)} centered size="sm">
+        <Modal.Body className="text-center py-4">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h5>¿Descartar cambios?</h5>
+          <p className="text-muted" style={{ fontSize: 14 }}>Los cambios no guardados se perderán.</p>
+          <div className="d-flex gap-2 justify-content-center mt-3">
+            <Button variant="secondary" onClick={() => setShowSubCloseConfirm(false)}>Seguir editando</Button>
+            <Button variant="danger" onClick={closeSubModal}>Descartar</Button>
+          </div>
+        </Modal.Body>
+      </Modal>
 
       {/* Hidden NatGeo file input */}
       <input

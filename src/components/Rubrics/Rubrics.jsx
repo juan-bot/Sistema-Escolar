@@ -11,6 +11,8 @@ const Rubrics = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingRubric, setEditingRubric] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [showSubCloseConfirm, setShowSubCloseConfirm] = useState(false)
   const [filterClass, setFilterClass] = useState('all')
   const [form, setForm] = useState({
     classIds: [],
@@ -56,6 +58,7 @@ const Rubrics = () => {
   }
 
   const handleCloseModal = () => {
+    setShowCloseConfirm(false)
     setShowModal(false)
     setEditingRubric(null)
     setForm({
@@ -65,6 +68,8 @@ const Rubrics = () => {
       criteria: [{ id: uuidv4(), name: '', description: '', maxScore: 10, weight: 100, type: 'custom', subcriteria: [] }]
     })
   }
+
+  const handleTryClose = () => setShowCloseConfirm(true)
 
   const addCriterion = () => {
     setForm({
@@ -154,11 +159,14 @@ const Rubrics = () => {
   }
 
   const closeSubcriteriaModal = () => {
+    setShowSubCloseConfirm(false)
     setShowSubcriteriaModal(false)
     setEditingCriterionForSub(null)
     setSubLabels([])
     setSubcriteriaForm([])
   }
+
+  const handleTryCloseSub = () => setShowSubCloseConfirm(true)
 
   const saveSubcriteria = () => {
     setForm(prev => ({
@@ -389,7 +397,7 @@ const Rubrics = () => {
       )}
 
       {/* Add/Edit Modal */}
-      <Modal show={showModal} onHide={handleCloseModal} centered size="lg">
+      <Modal show={showModal} onHide={handleTryClose} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editingRubric ? 'Editar Rúbrica' : 'Crear Rúbrica'}</Modal.Title>
         </Modal.Header>
@@ -694,7 +702,7 @@ const Rubrics = () => {
             ))}
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>Cancelar</Button>
+            <Button variant="secondary" onClick={handleTryClose}>Cancelar</Button>
             <button
               type="submit"
               className="btn btn-primary-custom"
@@ -709,6 +717,19 @@ const Rubrics = () => {
             </button>
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* Close Confirmation */}
+      <Modal show={showCloseConfirm} onHide={() => setShowCloseConfirm(false)} centered size="sm">
+        <Modal.Body className="text-center py-4">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h5>¿Descartar cambios?</h5>
+          <p className="text-muted" style={{ fontSize: 14 }}>Los cambios no guardados se perderán.</p>
+          <div className="d-flex gap-2 justify-content-center mt-3">
+            <Button variant="secondary" onClick={() => setShowCloseConfirm(false)}>Seguir editando</Button>
+            <Button variant="danger" onClick={handleCloseModal}>Descartar</Button>
+          </div>
+        </Modal.Body>
       </Modal>
 
       {/* Delete Confirmation */}
@@ -736,7 +757,7 @@ const Rubrics = () => {
       {/* Subcriteria Modal */}
       <Modal
         show={showSubcriteriaModal}
-        onHide={closeSubcriteriaModal}
+        onHide={handleTryCloseSub}
         centered
         size="lg"
         style={{ zIndex: 1070 }}
@@ -935,12 +956,25 @@ const Rubrics = () => {
             )}
           </div>
           <div className="d-flex gap-2" style={{ flexShrink: 0 }}>
-            <Button variant="secondary" onClick={closeSubcriteriaModal}>Cancelar</Button>
+            <Button variant="secondary" onClick={handleTryCloseSub}>Cancelar</Button>
             <button type="button" className="btn btn-primary-custom" onClick={saveSubcriteria}>
               Guardar Subcriterios
             </button>
           </div>
         </Modal.Footer>
+      </Modal>
+
+      {/* Subcriteria Close Confirmation */}
+      <Modal show={showSubCloseConfirm} onHide={() => setShowSubCloseConfirm(false)} centered size="sm">
+        <Modal.Body className="text-center py-4">
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h5>¿Descartar subcriterios?</h5>
+          <p className="text-muted" style={{ fontSize: 14 }}>Los cambios en los subcriterios no guardados se perderán.</p>
+          <div className="d-flex gap-2 justify-content-center mt-3">
+            <Button variant="secondary" onClick={() => setShowSubCloseConfirm(false)}>Seguir editando</Button>
+            <Button variant="danger" onClick={closeSubcriteriaModal}>Descartar</Button>
+          </div>
+        </Modal.Body>
       </Modal>
     </div>
   )
