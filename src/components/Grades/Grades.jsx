@@ -17,6 +17,7 @@ const Grades = () => {
   const [subModalCriterion, setSubModalCriterion] = useState(null)
   const [subModalSelections, setSubModalSelections] = useState({})
   const [showSubCloseConfirm, setShowSubCloseConfirm] = useState(false)
+  const [subModalManualGrade, setSubModalManualGrade] = useState('')
   const [natgeoImportResult, setNatgeoImportResult] = useState(null) // { matched, unmatched, pendingUpdates }
   const [activNatgeoCriterionId, setActivNatgeoCriterionId] = useState(null)
   const natgeoFileInputRef = useRef(null)
@@ -110,6 +111,7 @@ const Grades = () => {
     setSubModalStudent(student)
     setSubModalCriterion(criterion)
     setSubModalSelections({ ...(localSubSelections[student.id]?.[criterion.id] ?? {}) })
+    setSubModalManualGrade('')
     setShowSubModal(true)
   }
 
@@ -119,12 +121,15 @@ const Grades = () => {
     setSubModalStudent(null)
     setSubModalCriterion(null)
     setSubModalSelections({})
+    setSubModalManualGrade('')
   }
 
   const handleTryCloseSubModal = () => setShowSubCloseConfirm(true)
 
   const saveSubModal = () => {
-    const score = getScoreFromSubSelections(subModalCriterion, subModalSelections)
+    const score = subModalManualGrade !== ''
+      ? Math.min(Math.max(0, Number(subModalManualGrade)), 10)
+      : getScoreFromSubSelections(subModalCriterion, subModalSelections)
     const studentId = subModalStudent.id
     const criterionId = subModalCriterion.id
     const updatedGrades = {
@@ -645,6 +650,7 @@ const Grades = () => {
         }, 0)
         const computedScore = totalMax > 0 ? Math.round((obtainedPoints / totalMax) * 10 * 100) / 100 : 0
         const allSelected = subs.length > 0 && subs.every(s => subModalSelections[s.id])
+        const hasManualGrade = subModalManualGrade !== '' && !isNaN(Number(subModalManualGrade))
         const sortedLabels = [...labels].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0))
         return (
           <Modal show={showSubModal} onHide={handleTryCloseSubModal} centered size="md">
@@ -727,27 +733,58 @@ const Grades = () => {
                 )
               })}
             </Modal.Body>
-            <Modal.Footer style={{ justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 13 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  {obtainedPoints} / {totalMax} pts
+            <Modal.Footer style={{ flexDirection: 'column', gap: 10, alignItems: 'stretch' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px',
+                background: 'var(--bg-main)',
+                borderRadius: 8,
+                border: '1px dashed var(--border)'
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  O ingresa calificación manual:
                 </span>
-                {allSelected && (
-                  <span style={{ marginLeft: 10, fontWeight: 700, color: getGradeColor(computedScore), fontSize: 15 }}>
-                    → {computedScore.toFixed(1)} / 10
+                <input
+                  type="number"
+                  className="grade-input"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={subModalManualGrade}
+                  onChange={e => setSubModalManualGrade(e.target.value)}
+                  placeholder="0 – 10"
+                  style={{ width: 80, flexShrink: 0 }}
+                />
+                {hasManualGrade && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: getGradeColor(Math.min(Math.max(0, Number(subModalManualGrade)), 10)) }}>
+                    {Math.min(Math.max(0, Number(subModalManualGrade)), 10).toFixed(1)} / 10
                   </span>
                 )}
               </div>
-              <div className="d-flex gap-2">
-                <Button variant="secondary" onClick={handleTryCloseSubModal}>Cancelar</Button>
-                <button
-                  type="button"
-                  className="btn btn-primary-custom"
-                  onClick={saveSubModal}
-                  disabled={!allSelected}
-                >
-                  Aplicar Calificación
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 13 }}>
+                  {!hasManualGrade && (
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      {obtainedPoints} / {totalMax} pts
+                    </span>
+                  )}
+                  {allSelected && !hasManualGrade && (
+                    <span style={{ marginLeft: 10, fontWeight: 700, color: getGradeColor(computedScore), fontSize: 15 }}>
+                      → {computedScore.toFixed(1)} / 10
+                    </span>
+                  )}
+                </div>
+                <div className="d-flex gap-2">
+                  <Button variant="secondary" onClick={handleTryCloseSubModal}>Cancelar</Button>
+                  <button
+                    type="button"
+                    className="btn btn-primary-custom"
+                    onClick={saveSubModal}
+                    disabled={!allSelected && !hasManualGrade}
+                  >
+                    Aplicar Calificación
+                  </button>
+                </div>
               </div>
             </Modal.Footer>
           </Modal>
