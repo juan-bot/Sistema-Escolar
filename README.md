@@ -2,11 +2,11 @@
 
 # 🎓 Sistema-Escolar
 
-### Panel de gestión académica: universidades, clases, alumnos, rúbricas y calificaciones.
+### Academic management panel: universities, classes, students, rubrics, and grades.
 
-Aplicación web para administrar el día a día de un profesor o institución: cargá universidades, asignaturas, estudiantes y **rúbricas con criterios ponderados** para calcular calificaciones al instante, todo con un dashboard analítico.
+A web app to manage the day-to-day of a professor or institution: load universities, courses, students, and **weighted evaluation rubrics** to compute grades instantly, all with an analytics dashboard.
 
-**[🚀 Demo en vivo](https://juan-bot.github.io/Sistema-Escolar/)**
+**[🚀 Live Demo](https://juan-bot.github.io/Sistema-Escolar/)**
 
 ![Version](https://img.shields.io/badge/version-1.0.0-059669) ![React](https://img.shields.io/badge/React-18-61dafb) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952b3) ![Chart.js](https://img.shields.io/badge/Chart.js-4-ff6384) ![Vite](https://img.shields.io/badge/Vite-5-646cff)
 
@@ -14,43 +14,43 @@ Aplicación web para administrar el día a día de un profesor o institución: c
 
 ---
 
-## ✨ Módulos
+## ✨ Modules
 
-### 🏛 Universidades
-- Alta, edición y baja de universidades con acrónimo, color e ícono identificador.
+### 🏛 Universities
+- Create, edit, and delete universities with acronym, color, and identifying icon.
 
-### 📚 Clases
-- Asignaturas agrupadas por universidad: **código, semestre, horario y aula**.
-- Filtro rápido por institución.
+### 📚 Classes
+- Courses grouped by university: **code, semester, schedule, and classroom**.
+- Quick filter by institution.
 
-### 👥 Alumnos
-- Registro con **matrícula, nombre y correo**, asignación a clase.
-- **Búsqueda en vivo** y filtros por universidad/clase.
+### 👥 Students
+- Register with **enrollment ID, name, and email**, assigned to a class.
+- **Live search** and filters by university/class.
 
-### ⚖️ Rúbricas de evaluación
-- Editor completo de rúbricas con **criterios, pesos y puntaje máximo**.
-- Creadas por clase y reutilizables.
+### ⚖️ Assessment rubrics
+- Full rubric editor with **criteria, weights, and max score**.
+- Created per class and reusable.
 
-### 🧮 Calificaciones
-- Carga masiva de notas por rúbrica directamente en una tabla.
-- **Cálculo automático de promedio ponderado** por alumno según los pesos de cada criterio.
+### 🧮 Grades
+- Bulk grade entry per rubric directly in a table.
+- **Automatic weighted-average calculation** per student based on each criterion's weight.
 
-### 📊 Dashboard analítico
-- **Gráficas con Chart.js**: barras de alumnos por universidad y **donut** de distribución de asignaturas.
-- Tarjetas de resumen (universidades, clases, alumnos, rúbricas).
+### 📊 Analytics dashboard
+- **Chart.js graphics**: student bars per university and **donut** of course distribution.
+- Summary cards (universities, classes, students, rubrics).
 
 ---
 
-## 🧰 Stack
+## 🧰 Tech Stack
 
-| Capa | Tecnología |
+| Layer | Technology |
 |---|---|
 | Frontend | **React 18 + Vite 5** |
-| Enrutado | **React Router (HashRouter)** |
+| Routing | **React Router (HashRouter)** |
 | UI | **React-Bootstrap 5 + Bootstrap** |
-| Gráficos | **Chart.js + react-chartjs-2** |
-| Estado | **React Context** con persistencia en `localStorage` |
-| Datos demo | Seed inicial (`sampleData.js`) |
+| Charts | **Chart.js + react-chartjs-2** |
+| State | **React Context** with `localStorage` persistence |
+| Seed data | Initial demo data (`sampleData.js`) |
 
 ---
 
@@ -63,32 +63,32 @@ npm install
 npm run dev
 ```
 
-Abrí http://localhost:5173 en tu navegador. La app viene con **datos de ejemplo** precargados para que puedas explorarla de inmediato.
+Open http://localhost:5173 in your browser. The app ships with **sample data** preloaded so you can explore it right away.
 
 ```bash
-npm run build && npm run preview   # build de producción
+npm run build && npm run preview   # production build
 ```
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Project Structure
 
 ```
 src/
-├── App.jsx                 # Rutas y layout principal
-├── context/AppContext.jsx  # Estado global + persistencia localStorage
-├── data/sampleData.js      # Datos de ejemplo iniciales
+├── App.jsx                 # Routes and main layout
+├── context/AppContext.jsx  # Global state + localStorage persistence
+├── data/sampleData.js      # Initial sample data
 └── components/
-    ├── Dashboard/          # Resumen y gráficas
-    ├── Universities/       # Gestión de universidades
-    ├── Classes/            # Gestión de clases
-    ├── Students/           # Gestión de alumnos
-    ├── Rubrics/            # Editor de rúbricas
-    └── Grades/             # Cálculo de calificaciones
+    ├── Dashboard/          # Summary and charts
+    ├── Universities/       # School management
+    ├── Classes/            # Class management
+    ├── Students/           # Student management
+    ├── Rubrics/            # Rubric editor
+    └── Grades/             # Grade calculation
 ```
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-Proyecto de uso privado. Consultá antes de redistribuirlo.
+Private use project. Please ask before redistributing it.
