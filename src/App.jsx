@@ -9,6 +9,7 @@ import Students from './components/Students/Students'
 import Rubrics from './components/Rubrics/Rubrics'
 import Grades from './components/Grades/Grades'
 import Attendance from './components/Attendance/Attendance'
+import Activities from './components/Activities/Activities'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './index.css'
 
@@ -25,6 +26,7 @@ function App() {
             <Route path="/asistencia" element={<Attendance />} />
             <Route path="/rubricas" element={<Rubrics />} />
             <Route path="/calificaciones" element={<Grades />} />
+            <Route path="/actividades" element={<Activities />} />
           </Route>
         </Routes>
       </HashRouter>

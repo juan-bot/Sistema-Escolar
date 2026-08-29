@@ -12,6 +12,12 @@ const AppContext = createContext()
 
 export const useApp = () => useContext(AppContext)
 
+const getInitialTheme = () => {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'light' || saved === 'dark') return saved
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export const AppProvider = ({ children }) => {
   const [universities, setUniversities] = useState([])
   const [classes, setClasses] = useState([])
@@ -20,6 +26,14 @@ export const AppProvider = ({ children }) => {
   const [grades, setGrades] = useState([])
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
+  const [theme, setTheme] = useState(getInitialTheme)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
 
   // Real-time listeners
   useEffect(() => {
@@ -176,6 +190,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     universities, classes, students, rubrics, grades, attendance, loading,
+    theme, toggleTheme,
     addUniversity, updateUniversity, deleteUniversity,
     addClass, updateClass, deleteClass,
     addStudent, updateStudent, deleteStudent,

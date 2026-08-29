@@ -7,7 +7,8 @@ import {
   BsPeople,
   BsCalendarCheck,
   BsClipboardCheck,
-  BsBarChartLine
+  BsBarChartLine,
+  BsShuffle
 } from 'react-icons/bs'
 
 const navItems = [
@@ -17,7 +18,8 @@ const navItems = [
   { path: '/alumnos', icon: BsPeople, label: 'Alumnos' },
   { path: '/asistencia', icon: BsCalendarCheck, label: 'Asistencia' },
   { path: '/rubricas', icon: BsClipboardCheck, label: 'Rúbricas' },
-  { path: '/calificaciones', icon: BsBarChartLine, label: 'Calificaciones' }
+  { path: '/calificaciones', icon: BsBarChartLine, label: 'Calificaciones' },
+  { path: '/actividades', icon: BsShuffle, label: 'Actividades' }
 ]
 
 const Sidebar = ({ isOpen, onToggle }) => {

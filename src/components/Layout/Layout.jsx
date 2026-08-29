@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
-import { BsList, BsBell } from 'react-icons/bs'
+import { BsList, BsBell, BsSun, BsMoon } from 'react-icons/bs'
 import { useApp } from '../../context/AppContext'
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { loading } = useApp()
+  const { loading, theme, toggleTheme } = useApp()
 
   if (loading) {
     return (
@@ -32,6 +32,13 @@ const Layout = () => {
           </button>
           <div style={{ flex: 1 }} />
           <div className="top-bar-actions">
+            <button
+              className="btn btn-link notification-btn"
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+            >
+              {theme === 'light' ? <BsMoon size={20} /> : <BsSun size={20} />}
+            </button>
             <button className="btn btn-link notification-btn">
               <BsBell size={20} />
             </button>
