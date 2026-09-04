@@ -1,0 +1,87 @@
+/* Users page specific styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.custom-table .student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.custom-table td {
+  vertical-align: middle;
+}
+
+.btn-sm-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.btn-sm-icon.danger:hover {
+  background: #FEF2F2;
+  color: var(--danger);
+  border-color: #FECACA;
+}
+
+/* Modal form styles */
+.modal-body .form-control:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(233, 30, 134, 0.1);
+}
+
+/* Status indicators */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-dot.active {
+  background: var(--success);
+}
+
+.status-dot.suspended {
+  background: var(--warning);
+}
+
+/* ===== CONFIRMATION MODAL ===== */
+.confirm-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.confirm-icon-wrapper.approve {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.confirm-icon-wrapper.suspend {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.confirm-icon-wrapper.delete {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.confirm-icon {
+  font-size: 32px;
+}

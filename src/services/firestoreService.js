@@ -6,6 +6,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   writeBatch,
   serverTimestamp
 } from 'firebase/firestore'
@@ -16,17 +17,26 @@ const col = (name) => collection(db, name)
 
 // ---------- Generic CRUD ----------
 
-export const subscribeCollection = (collectionName, callback) => {
+export const subscribeAll = (collectionName, callback) => {
   return onSnapshot(query(col(collectionName)), (snapshot) => {
     const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
     callback(data)
   })
 }
 
-export const addDocument = async (collectionName, data) => {
-  const { id, ...rest } = data  // remove any client-side id
+export const subscribeCollection = (collectionName, userId, callback) => {
+  const q = userId ? query(col(collectionName), where('userId', '==', userId)) : query(col(collectionName))
+  return onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+    callback(data)
+  })
+}
+
+export const addDocument = async (collectionName, data, userId) => {
+  const { id, ...rest } = data
   const docRef = await addDoc(col(collectionName), {
     ...rest,
+    userId,
     createdAt: serverTimestamp()
   })
   return docRef.id

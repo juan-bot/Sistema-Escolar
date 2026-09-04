@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { useAuth } from './AuthContext'
 import {
   subscribeCollection,
   addDocument,
@@ -19,6 +20,7 @@ const getInitialTheme = () => {
 }
 
 export const AppProvider = ({ children }) => {
+  const { user } = useAuth()
   const [universities, setUniversities] = useState([])
   const [classes, setClasses] = useState([])
   const [students, setStudents] = useState([])
@@ -35,8 +37,21 @@ export const AppProvider = ({ children }) => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
 
+  const userId = user?.uid
+
   // Real-time listeners
   useEffect(() => {
+    if (!userId) {
+      setUniversities([])
+      setClasses([])
+      setStudents([])
+      setRubrics([])
+      setGrades([])
+      setAttendance([])
+      setLoading(false)
+      return
+    }
+
     let loaded = 0
     const total = 6
     const checkLoaded = () => {
@@ -45,20 +60,20 @@ export const AppProvider = ({ children }) => {
     }
 
     const unsubs = [
-      subscribeCollection('universities', (data) => { setUniversities(data); checkLoaded() }),
-      subscribeCollection('classes', (data) => { setClasses(data); checkLoaded() }),
-      subscribeCollection('students', (data) => { setStudents(data); checkLoaded() }),
-      subscribeCollection('rubrics', (data) => { setRubrics(data); checkLoaded() }),
-      subscribeCollection('grades', (data) => { setGrades(data); checkLoaded() }),
-      subscribeCollection('attendance', (data) => { setAttendance(data); checkLoaded() }),
+      subscribeCollection('universities', userId, (data) => { setUniversities(data); checkLoaded() }),
+      subscribeCollection('classes', userId, (data) => { setClasses(data); checkLoaded() }),
+      subscribeCollection('students', userId, (data) => { setStudents(data); checkLoaded() }),
+      subscribeCollection('rubrics', userId, (data) => { setRubrics(data); checkLoaded() }),
+      subscribeCollection('grades', userId, (data) => { setGrades(data); checkLoaded() }),
+      subscribeCollection('attendance', userId, (data) => { setAttendance(data); checkLoaded() }),
     ]
 
     return () => unsubs.forEach(unsub => unsub())
-  }, [])
+  }, [userId])
 
   // University CRUD
   const addUniversity = async (university) => {
-    await addDocument('universities', university)
+    await addDocument('universities', university, userId)
   }
 
   const updateUniversity = async (id, data) => {
@@ -97,7 +112,7 @@ export const AppProvider = ({ children }) => {
 
   // Class CRUD
   const addClass = async (classData) => {
-    await addDocument('classes', classData)
+    await addDocument('classes', classData, userId)
   }
 
   const updateClass = async (id, data) => {
@@ -129,7 +144,7 @@ export const AppProvider = ({ children }) => {
 
   // Student CRUD
   const addStudent = async (student) => {
-    await addDocument('students', student)
+    await addDocument('students', student, userId)
   }
 
   const updateStudent = async (id, data) => {
@@ -144,7 +159,7 @@ export const AppProvider = ({ children }) => {
 
   // Rubric CRUD
   const addRubric = async (rubric) => {
-    await addDocument('rubrics', rubric)
+    await addDocument('rubrics', rubric, userId)
   }
 
   const updateRubric = async (id, data) => {
@@ -159,7 +174,7 @@ export const AppProvider = ({ children }) => {
 
   // Grade CRUD
   const addGrade = async (grade) => {
-    await addDocument('grades', grade)
+    await addDocument('grades', grade, userId)
   }
 
   const updateGrade = async (id, data) => {
@@ -168,7 +183,7 @@ export const AppProvider = ({ children }) => {
 
   // Attendance CRUD
   const addAttendance = async (session) => {
-    await addDocument('attendance', session)
+    await addDocument('attendance', session, userId)
   }
 
   const updateAttendance = async (id, data) => {
