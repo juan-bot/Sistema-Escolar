@@ -856,7 +856,7 @@ const Rubrics = () => {
             </span>
           </div>
 
-          <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+          <div className="table-scroll-container" style={{ marginBottom: 8 }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px', tableLayout: 'auto' }}>
               <thead>
                 <tr>

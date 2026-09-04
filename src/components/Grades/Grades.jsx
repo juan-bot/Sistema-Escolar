@@ -485,7 +485,7 @@ const Grades = () => {
               </div>
             </div>
           </div>
-          <div className="card-body-custom p-0" style={{ overflowX: 'auto' }}>
+          <div className="card-body-custom p-0 table-scroll-container">
             <table className="custom-table">
               <thead>
                 <tr>

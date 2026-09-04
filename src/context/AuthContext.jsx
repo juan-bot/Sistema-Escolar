@@ -9,14 +9,13 @@ import {
 } from 'firebase/auth'
 import {
   doc,
-  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
   collection,
   query,
   where,
-  onSnapshot,
+  getDocs,
   serverTimestamp
 } from 'firebase/firestore'
 
@@ -47,10 +46,11 @@ export const AuthProvider = ({ children }) => {
 
   const getUserProfile = async (uid) => {
     try {
-      const docRef = doc(db, 'users', uid)
-      const docSnap = await getDoc(docRef)
-      if (docSnap.exists()) {
-        return { uid, ...docSnap.data() }
+      await new Promise(r => setTimeout(r, 300))
+      const q = query(collection(db, 'users'), where('__name__', '==', uid))
+      const snapshot = await getDocs(q)
+      if (!snapshot.empty) {
+        return { uid, ...snapshot.docs[0].data() }
       }
       return null
     } catch (err) {

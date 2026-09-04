@@ -246,7 +246,7 @@ const Users = () => {
               <p className="text-muted">Crea el primer usuario profesor</p>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="table-responsive table-scroll-container">
               <table className="custom-table mb-0">
                 <thead>
                   <tr>

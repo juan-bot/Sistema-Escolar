@@ -263,7 +263,7 @@ const Students = () => {
       ) : (
         <div className="custom-card">
           <div className="card-body-custom p-0">
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-scroll-container">
               <table className="custom-table">
                 <thead>
                   <tr>
@@ -524,7 +524,7 @@ const Students = () => {
                   <span>Vista previa</span>
                   <span style={{ color: '#10B981' }}>{importPreview.length} alumnos</span>
                 </div>
-                <div style={{ maxHeight: 260, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div className="table-scroll-container" style={{ maxHeight: 260, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>
                   <table className="custom-table" style={{ margin: 0 }}>
                     <thead>
                       <tr>

@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react'
 import { Row, Col, Modal, Form, Button, Alert } from 'react-bootstrap'
 import { useApp } from '../../context/AppContext'
+import * as XLSX from 'xlsx'
 import {
   BsPlus, BsCalendarCheck, BsCheckCircleFill, BsXCircleFill,
-  BsClockFill, BsFileEarmarkTextFill, BsTrash, BsPencil
+  BsClockFill, BsFileEarmarkTextFill, BsTrash, BsPencil, BsDownload
 } from 'react-icons/bs'
 
 const STATUS_CONFIG = {
@@ -11,6 +12,19 @@ const STATUS_CONFIG = {
   absent: { label: 'Ausente', icon: BsXCircleFill, color: '#EF4444', short: '✗' },
   late: { label: 'Retardo', icon: BsClockFill, color: '#F59E0B', short: '⏰' },
   justified: { label: 'Justificado', icon: BsFileEarmarkTextFill, color: '#3B82F6', short: 'J' }
+}
+
+const sanitizeExcelName = (value, fallback) => {
+  const sanitized = String(value || '')
+    .replace(/[\\/:*?"<>|\[\]]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return sanitized || fallback
+}
+
+const parseLocalDate = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
 }
 
 const Attendance = () => {
@@ -27,6 +41,8 @@ const Attendance = () => {
   const [sessionRecords, setSessionRecords] = useState([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [collapseLegend, setCollapseLegend] = useState(false)
+  const [collapseTable, setCollapseTable] = useState(false)
 
   const availableClasses = filterUni === 'all'
     ? classes
@@ -143,6 +159,104 @@ const Attendance = () => {
     })
   }
 
+  const handleExportExcel = () => {
+    if (!selectedClassId) {
+      alert('Selecciona una clase para exportar sus asistencias')
+      return
+    }
+
+    const cls = classes.find(c => c.id === selectedClassId)
+    const uni = cls ? universities.find(u => u.id === cls.universityId) : null
+    const sortedSessions = attendance
+      .filter(session => session.classId === selectedClassId)
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    if (!cls || sortedSessions.length === 0) {
+      alert('La clase seleccionada no tiene asistencias para exportar')
+      return
+    }
+
+    const schoolAlias = sanitizeExcelName(uni?.abbreviation || uni?.name, 'Escuela')
+    const groupName = sanitizeExcelName(cls.name || cls.code, 'Grupo')
+    const fileBaseName = `${schoolAlias} - ${groupName}`
+    const dateHeaders = sortedSessions.map(session => parseLocalDate(session.date))
+    const summaryHeaders = [
+      'Presentes', 'Ausencias', 'Retardos', 'Justificados', 'Sin registro', 'Asistencia'
+    ]
+
+    const rows = students
+      .filter(student => student.classId === selectedClassId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      .map(student => {
+        const counts = { present: 0, absent: 0, late: 0, justified: 0, missing: 0 }
+        const statuses = sortedSessions.map(session => {
+          const record = (session.records || []).find(item => item.studentId === student.id)
+          if (!record || !STATUS_CONFIG[record.status]) {
+            counts.missing++
+            return 'Sin registro'
+          }
+          counts[record.status]++
+          return STATUS_CONFIG[record.status].label
+        })
+        const recordedSessions = sortedSessions.length - counts.missing
+        const attendanceRate = recordedSessions > 0
+          ? (counts.present + counts.justified + counts.late * 0.5) / recordedSessions
+          : null
+
+        return [
+          student.name || '',
+          String(student.matricula || ''),
+          ...statuses,
+          counts.present,
+          counts.absent,
+          counts.late,
+          counts.justified,
+          counts.missing,
+          attendanceRate
+        ]
+      })
+
+    const headerRowIndex = 5
+    const wsData = [
+      ['Escuela', uni?.name || 'Sin universidad'],
+      ['Alias', schoolAlias],
+      ['Grupo', groupName],
+      ['Clase', cls.name || 'Sin clase'],
+      ['Semestre', cls.semester || ''],
+      ['Alumno', 'Matrícula', ...dateHeaders, ...summaryHeaders],
+      ...rows
+    ]
+    const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true })
+    const dateStartColumn = 2
+    sortedSessions.forEach((_, index) => {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: dateStartColumn + index })
+      if (ws[cellAddress]) ws[cellAddress].z = 'dd/mm/yyyy'
+    })
+
+    const attendanceColumn = dateStartColumn + sortedSessions.length + summaryHeaders.length - 1
+    rows.forEach((_, index) => {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex + 1 + index, c: attendanceColumn })
+      if (ws[cellAddress]) ws[cellAddress].z = '0%'
+    })
+
+    ws['!cols'] = [
+      { wch: 28 },
+      { wch: 18 },
+      ...sortedSessions.map(() => ({ wch: 14 })),
+      ...summaryHeaders.map(header => ({ wch: Math.max(12, header.length + 2) }))
+    ]
+    ws['!autofilter'] = {
+      ref: XLSX.utils.encode_range({
+        s: { r: headerRowIndex, c: 0 },
+        e: { r: headerRowIndex + rows.length, c: attendanceColumn }
+      })
+    }
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, fileBaseName.slice(0, 31))
+    XLSX.writeFile(wb, `${fileBaseName}.xlsx`)
+  }
+
   const selectedClass = classes.find(c => c.id === selectedClassId)
   const selectedUni = selectedClass ? universities.find(u => u.id === selectedClass.universityId) : null
 
@@ -153,11 +267,21 @@ const Attendance = () => {
           <h2>Asistencia</h2>
           <p>Registra y consulta la asistencia de tus alumnos por clase</p>
         </div>
-        {selectedClassId && classStudents.length > 0 && (
-          <button className="btn btn-primary-custom" onClick={handleNewSession}>
-            <BsPlus size={20} /> Nueva Sesión
+        <div className="d-flex gap-2 page-header-actions">
+          <button
+            className="btn btn-outline-custom"
+            onClick={handleExportExcel}
+            disabled={!selectedClassId || classStudents.length === 0 || classSessions.length === 0}
+            title={!selectedClassId ? 'Selecciona una clase para exportar' : undefined}
+          >
+            <BsDownload size={20} /> Exportar Excel
           </button>
-        )}
+          {selectedClassId && classStudents.length > 0 && (
+            <button className="btn btn-primary-custom" onClick={handleNewSession}>
+              <BsPlus size={20} /> Nueva Sesión
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -202,51 +326,78 @@ const Attendance = () => {
           <p>Agrega alumnos a la clase para poder tomar asistencia</p>
         </div>
       ) : (
-        <>
-          {/* Class info */}
-          {selectedClass && (
-            <div className="custom-card mb-3">
-              <div className="card-body-custom py-2 px-3 d-flex align-items-center justify-content-between">
-                <div>
-                  <strong>{selectedUni?.icon} {selectedClass.name}</strong>
-                  <span className="text-muted ms-2">({selectedClass.code})</span>
-                  <span className="text-muted ms-2">• {classStudents.length} alumnos • {classSessions.length} sesiones</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {classSessions.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📅</div>
-              <h5>No hay sesiones registradas</h5>
-              <p>Crea una nueva sesión para comenzar a tomar asistencia</p>
-              <button className="btn btn-primary-custom" onClick={handleNewSession}>
-                <BsPlus size={20} /> Nueva Sesión
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Legend */}
-              <div className="d-flex gap-3 mb-3 flex-wrap" style={{ fontSize: 13 }}>
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <div key={key} className="d-flex align-items-center gap-1">
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: cfg.color + '20', color: cfg.color, fontSize: 12, fontWeight: 600
-                    }}>
-                      {cfg.short}
-                    </span>
-                    <span style={{ color: 'var(--text-secondary)' }}>{cfg.label}</span>
+<>
+              {/* Class info card - always visible */}
+              {selectedClass && (
+                <div className="custom-card mb-3">
+                  <div className="card-body-custom py-2 px-3 d-flex align-items-center justify-content-between">
+                    <div>
+                      <strong>{selectedUni?.icon} {selectedClass.name}</strong>
+                      <span className="text-muted ms-2">({selectedClass.code})</span>
+                      <span className="text-muted ms-2">• {classStudents.length} alumnos • {classSessions.length} sesiones</span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
 
-              <div className="custom-card">
-              <div className="card-body-custom p-0">
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="custom-table" style={{ minWidth: Math.max(600, 250 + classSessions.length * 80 + 200) }}>
+              {classSessions.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📅</div>
+                  <h5>No hay sesiones registradas</h5>
+                  <p>Crea una nueva sesión para comenzar a tomar asistencia</p>
+                  <button className="btn btn-primary-custom" onClick={handleNewSession}>
+                    <BsPlus size={20} /> Nueva Sesión
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Legend - collapsible on mobile */}
+                  <div className="collapsible-section">
+                    <button
+                      type="button"
+                      className={`collapsible-header ${collapseLegend ? 'collapsed' : ''}`}
+                      onClick={() => setCollapseLegend(!collapseLegend)}
+                      aria-expanded={!collapseLegend}
+                      aria-controls="attendance-legend"
+                    >
+                      <span>📋 Estado de Asistencia</span>
+                      <span className="collapse-icon">▼</span>
+                    </button>
+                    <div id="attendance-legend" className={`collapsible-body ${collapseLegend ? 'hidden' : ''}`} style={{ padding: '8px 16px 16px' }}>
+                      <div className="d-flex gap-3 mb-3 flex-wrap legend-bar" style={{ fontSize: 13 }}>
+                        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                          <div key={key} className="d-flex align-items-center gap-1">
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: 22, height: 22, borderRadius: '50%',
+                              background: cfg.color + '20', color: cfg.color, fontSize: 12, fontWeight: 600
+                            }}>
+                              {cfg.short}
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{cfg.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Table - collapsible on mobile */}
+                  <div className="collapsible-section">
+                    <button
+                      type="button"
+                      className={`collapsible-header ${collapseTable ? 'collapsed' : ''}`}
+                      onClick={() => setCollapseTable(!collapseTable)}
+                      aria-expanded={!collapseTable}
+                      aria-controls="attendance-table"
+                    >
+                      <span>📊 Tabla de Asistencia</span>
+                      <span className="collapse-icon">▼</span>
+                    </button>
+                    <div id="attendance-table" className={`collapsible-body ${collapseTable ? 'hidden' : ''}`} style={{ padding: 0 }}>
+                      <div className="custom-card">
+                        <div className="card-body-custom p-0">
+                          <div className="table-scroll-container">
+                            <table className="custom-table" style={{ minWidth: Math.max(600, 250 + classSessions.length * 80 + 200) }}>
                     <thead>
                       <tr>
                         <th style={{ minWidth: 200, position: 'sticky', left: 0, background: 'var(--bg-card)', zIndex: 2 }}>Alumno</th>
@@ -346,6 +497,8 @@ const Attendance = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
             </>
           )}
         </>
@@ -385,7 +538,7 @@ const Attendance = () => {
             ))}
           </div>
 
-          <div style={{ maxHeight: 400, overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 8 }}>
+          <div className="table-scroll-container" style={{ maxHeight: 400, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
             <table className="custom-table" style={{ margin: 0 }}>
               <thead>
                 <tr>

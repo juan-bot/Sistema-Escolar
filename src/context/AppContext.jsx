@@ -39,7 +39,7 @@ export const AppProvider = ({ children }) => {
 
   const userId = user?.uid
 
-  // Real-time listeners
+// Real-time listeners
   useEffect(() => {
     if (!userId) {
       setUniversities([])
@@ -59,16 +59,30 @@ export const AppProvider = ({ children }) => {
       if (loaded >= total) setLoading(false)
     }
 
-    const unsubs = [
-      subscribeCollection('universities', userId, (data) => { setUniversities(data); checkLoaded() }),
-      subscribeCollection('classes', userId, (data) => { setClasses(data); checkLoaded() }),
-      subscribeCollection('students', userId, (data) => { setStudents(data); checkLoaded() }),
-      subscribeCollection('rubrics', userId, (data) => { setRubrics(data); checkLoaded() }),
-      subscribeCollection('grades', userId, (data) => { setGrades(data); checkLoaded() }),
-      subscribeCollection('attendance', userId, (data) => { setAttendance(data); checkLoaded() }),
+    const collections = [
+      'universities', 'classes', 'students', 'rubrics', 'grades', 'attendance'
     ]
+    
+    const unsubs = []
+    collections.forEach((name, index) => {
+      // Stagger listeners by 200ms to avoid overwhelming Firestore
+      setTimeout(() => {
+        const unsub = subscribeCollection(name, userId, (data) => {
+          if (name === 'universities') setUniversities(data)
+          if (name === 'classes') setClasses(data)
+          if (name === 'students') setStudents(data)
+          if (name === 'rubrics') setRubrics(data)
+          if (name === 'grades') setGrades(data)
+          if (name === 'attendance') setAttendance(data)
+          checkLoaded()
+        })
+        unsubs.push(unsub)
+      }, index * 200)
+    })
 
-    return () => unsubs.forEach(unsub => unsub())
+    return () => {
+      unsubs.forEach(unsub => unsub())
+    }
   }, [userId])
 
   // University CRUD

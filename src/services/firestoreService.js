@@ -4,11 +4,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  onSnapshot,
   query,
   where,
   writeBatch,
-  serverTimestamp
+  serverTimestamp,
+  getDocs
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -17,19 +17,35 @@ const col = (name) => collection(db, name)
 
 // ---------- Generic CRUD ----------
 
-export const subscribeAll = (collectionName, callback) => {
-  return onSnapshot(query(col(collectionName)), (snapshot) => {
-    const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-    callback(data)
-  })
+export const subscribeCollection = (collectionName, userId, callback) => {
+  const fetchData = async () => {
+    try {
+      await new Promise(r => setTimeout(r, 200))
+      const q = userId ? query(col(collectionName), where('userId', '==', userId)) : query(col(collectionName))
+      const snapshot = await getDocs(q)
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      callback(data)
+    } catch (err) {
+      console.error(`Error cargando ${collectionName}:`, err)
+    }
+  }
+  fetchData()
+  return () => {}
 }
 
-export const subscribeCollection = (collectionName, userId, callback) => {
-  const q = userId ? query(col(collectionName), where('userId', '==', userId)) : query(col(collectionName))
-  return onSnapshot(q, (snapshot) => {
-    const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-    callback(data)
-  })
+export const subscribeAll = (collectionName, callback) => {
+  const fetchData = async () => {
+    try {
+      await new Promise(r => setTimeout(r, 200))
+      const snapshot = await getDocs(col(collectionName))
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      callback(data)
+    } catch (err) {
+      console.error(`Error cargando ${collectionName}:`, err)
+    }
+  }
+  fetchData()
+  return () => {}
 }
 
 export const addDocument = async (collectionName, data, userId) => {

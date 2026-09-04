@@ -255,7 +255,7 @@ const WheelView = ({
 
       <div className="wheel-container" style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
         <div
-          className="wheel"
+          className="wheel activity-wheel"
           style={{
             width: 300,
             height: 300,
@@ -352,7 +352,7 @@ const CardsView = ({
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24, width: '100%' }}>
-        <div style={{
+        <div className="activity-card-display" style={{
           width: 280,
           height: 180,
           borderRadius: 'var(--radius)',
@@ -457,12 +457,6 @@ const SpinButton = ({ spinning, onClick, disabled, text }) => (
         </>
       )}
     </button>
-    <style jsx>{`
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
   </div>
 )
 
